@@ -1,8 +1,8 @@
 const PREFIX='sifir-kami:'+self.registration.scope+':';
-const CACHE=PREFIX+'1.0.1';
-const FILES=['./','./index.html','./style.css','./app.js','./game.js','./input.js','./scene.js','./manifest.webmanifest','./vendor/phaser.min.js','./assets/station.png','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png'];
+const CACHE=PREFIX+'1.1.0';
+const FILES=['./','./index.html','./style.css','./merge.css','./app.js','./game.js','./input.js','./settings.js','./learning.js','./scene.js','./manifest.webmanifest','./vendor/phaser.min.js','./assets/station.png','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES.map(path=>new Request(path,{cache:'reload'})))).then(()=>self.skipWaiting())));
-// Activate fixed assets immediately. The app reloads only at a safe lobby/end screen;
+// Activate fixed assets immediately. The app reloads only at the lobby;
 // active games already have their JS in memory and continue uninterrupted.
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(PREFIX)&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

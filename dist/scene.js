@@ -28,7 +28,8 @@ export const avatarURLs=avatars.map(c=>c.toDataURL());
 
 export function startStation(parent,onReady) {
   if(!window.Phaser){parent.innerHTML='<p class="engine-error">Enjin kapal belum dimuatkan. Muat semula halaman untuk bermain.</p>';return null;}
-  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const systemReduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let reduced=systemReduced;
   class Station extends Phaser.Scene {
     constructor(){super('station');this.roster=[];this.actors=[];this.ready=false;}
     preload(){this.load.image('station','./assets/station.png');}
@@ -45,6 +46,7 @@ export function startStation(parent,onReady) {
       });
       onReady?.(this);
     }
+    setMotion(value){const next=systemReduced||value;if(next===reduced)return;reduced=next;if(this.ready)this.setRoster(this.roster);}
     setRoster(players){
       this.roster=players;if(!this.ready)return;
       this.actors.forEach(a=>{this.tweens.killTweensOf([a.container,a.sprite]);a.container.destroy();});this.actors=[];

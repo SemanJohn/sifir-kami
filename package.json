@@ -1,8 +1,8 @@
 {
   "name": "sifir-kami",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "Phaser 2D pass-and-play math social deduction game",
-  "scripts": {"test": "node --test tests/game.test.js"}
+  "scripts": {"test": "node --test tests/*.test.js"}
 }
