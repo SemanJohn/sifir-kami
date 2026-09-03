@@ -56,12 +56,25 @@ export function settleRound(game,rng=Math.random) {
   else if(game.battery<=0){game.winner='IMPOSTOR';game.reason='Bateri kapal telah habis.';}
   return game;
 }
+export function voteCandidates(game, voterId) {
+  return livePlayers(game).filter(p=>p.id!==Number(voterId));
+}
+export function canVoteFor(game, voterId, target) {
+  if(!livePlayers(game).some(p=>String(p.id)===String(voterId))) return false;
+  if(target==='skip') return true;
+  return voteCandidates(game,voterId).some(p=>String(p.id)===String(target));
+}
+export function castVote(game, voterId, target) {
+  if(!canVoteFor(game,voterId,target)) throw new Error('Tidak boleh mengundi diri sendiri atau pemain tidak aktif.');
+  if(Object.hasOwn(game.votes,voterId)) throw new Error('Undi sudah direkodkan.');
+  game.votes[voterId]=String(target);
+}
 export function voteResult(game) {
   const active=livePlayers(game);
   if(active.some(p=>!Object.hasOwn(game.votes,p.id))) throw new Error('Undian belum lengkap.');
   const counts={skip:0}; active.forEach(p=>counts[p.id]=0);
   for(const [voter,target] of Object.entries(game.votes)) {
-    if(!active.some(p=>String(p.id)===voter) || !Object.hasOwn(counts,target)) throw new Error('Undi tidak sah.');
+    if(!canVoteFor(game,voter,target) || !Object.hasOwn(counts,target)) throw new Error('Undi tidak sah.');
     counts[target]++;
   }
   const highest=Math.max(...Object.values(counts)), leaders=Object.keys(counts).filter(k=>counts[k]===highest);

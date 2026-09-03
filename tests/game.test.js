@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {newGame,crewQuestion,impostorQuestion,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig} from '../dist/game.js';
+import {newGame,crewQuestion,impostorQuestion,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,voteCandidates,canVoteFor,castVote} from '../dist/game.js';
+import {createAnswerInput} from '../dist/input.js';
 const names=n=>Array.from({length:n},(_,i)=>`Pemain ${i+1}`);
 const make=(n=4)=>newGame(names(n),[1,2,3,4],()=>0);
 const play=(g,correct=3,success=true)=>{for(const p of livePlayers(g))recordTurn(g,p.id,p.role==='CREW'?{correct,answered:3}:{success,table:2,intruder:3});settleRound(g);};
@@ -45,13 +46,59 @@ test('tie or skip produces no elimination',()=>{
   const tiedSkip=make();tiedSkip.votes={0:'skip',1:'skip',2:1,3:1};assert.equal(voteResult(tiedSkip).eliminated,null);
 });
 test('impostor elimination wins; crew elimination excludes future participation',()=>{
-  const g=make();g.votes={0:0,1:0,2:0,3:'skip'};assert.equal(voteResult(g).eliminated.role,'IMPOSTOR');assert.equal(g.winner,'CREW');
-  const crew=make();crew.votes={0:1,1:1,2:1,3:'skip'};voteResult(crew);assert.equal(crew.winner,null);assert.equal(livePlayers(crew).length,3);assert.throws(()=>recordTurn(crew,1));nextRound(crew);play(crew);assert.equal(crew.battery,70);
+  const g=make();g.votes={0:'skip',1:0,2:0,3:0};assert.equal(voteResult(g).eliminated.role,'IMPOSTOR');assert.equal(g.winner,'CREW');
+  const crew=make();crew.votes={0:1,1:'skip',2:1,3:1};voteResult(crew);assert.equal(crew.winner,null);assert.equal(livePlayers(crew).length,3);assert.throws(()=>recordTurn(crew,1));nextRound(crew);play(crew);assert.equal(crew.battery,70);
 });
 test('final-round vote is allowed before survival wins',()=>{
   const g=make();for(let i=0;i<3;i++){play(g,1,null);assert.equal(g.winner,null);skip(g);if(i<2)nextRound(g);}assert.equal(g.winner,'IMPOSTOR');
-  const caught=make();caught.round=3;caught.votes={0:0,1:0,2:0,3:0};voteResult(caught);assert.equal(caught.winner,'CREW');
+  const caught=make();caught.round=3;caught.votes={0:'skip',1:0,2:0,3:0};voteResult(caught);assert.equal(caught.winner,'CREW');
 });
 test('incomplete rounds and votes are rejected',()=>{
   const g=make();assert.throws(()=>settleRound(g));assert.throws(()=>voteResult(g));g.votes={0:'invalid',1:0,2:0,3:0};assert.throws(()=>voteResult(g));
+});
+
+test('every voter sees only other living players; self votes fail for numbers and strings',()=>{
+  for(let n=4;n<=8;n++){
+    const g=make(n);
+    for(const p of g.players){
+      assert.equal(voteCandidates(g,p.id).length,n-1);
+      assert.ok(voteCandidates(g,p.id).every(candidate=>candidate.id!==p.id));
+      for(const id of [p.id,String(p.id)]){
+        assert.equal(canVoteFor(g,p.id,id),false);
+        assert.throws(()=>castVote(g,p.id,id));
+      }
+      assert.equal(canVoteFor(g,p.id,'skip'),true);
+    }
+    g.players[1].alive=false;
+    assert.ok(voteCandidates(g,0).every(p=>p.id!==0&&p.id!==1));
+    assert.equal(canVoteFor(g,0,1),false);
+    assert.equal(canVoteFor(g,1,'skip'),false);
+    assert.equal(canVoteFor(g,999,'skip'),false);
+  }
+});
+test('valid votes record once and a self vote cannot enter the tally directly',()=>{
+  const g=make();castVote(g,0,1);assert.equal(g.votes[0],'1');
+  assert.throws(()=>castVote(g,0,'skip'));assert.equal(g.votes[0],'1');
+  castVote(g,1,'skip');castVote(g,2,1);castVote(g,3,1);
+  assert.equal(voteResult(g).eliminated.id,1);
+  const injected=make();injected.votes={0:0,1:0,2:0,3:0};
+  assert.throws(()=>voteResult(injected));assert.equal(injected.players[0].alive,true);
+});
+test('a touch from the previous question cannot answer the next question',()=>{
+  const input=createAnswerInput();input.reset(1);input.press(1,'16',7);
+  input.reset(2);
+  assert.equal(input.release(2,'16',7),false);
+  assert.equal(input.release(1,'16',7),false);
+  assert.equal(input.press(1,'16',8),false);
+  assert.equal(input.press(2,'16',8),true);
+  assert.equal(input.release(2,'16',8),true);
+  assert.equal(input.release(2,'16',8),false);
+});
+test('cancelled, mismatched and repeated pointer releases never submit an answer',()=>{
+  const input=createAnswerInput();input.reset(3);
+  input.press(3,'24',1);assert.equal(input.release(3,'24',2),false);
+  input.press(3,'24',1);assert.equal(input.release(3,'18',1),false);
+  input.press(3,'24',1);input.cancel();assert.equal(input.release(3,'24',1),false);
+  input.press(3,'24',1);assert.equal(input.release(3,'24',1),true);
+  assert.equal(input.release(3,'24',1),false);
 });

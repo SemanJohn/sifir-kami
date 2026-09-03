@@ -4,17 +4,24 @@ Permainan web 2D berbahasa Melayu untuk 4–8 pemain sekolah rendah. Satu perant
 
 ## Cuba dan main
 
-1. Pilih sekurang-kurangnya dua sifir (1–12), isi 4–8 nama yang berbeza, kemudian tekan **Mula misi**.
+1. Isi 4–8 nama berbeza pada langkah **Krew**, kemudian pilih sekurang-kurangnya dua sifir (1–12) pada langkah **Sifir** dan tekan **Mula misi**. Nama dipaparkan empat pada satu halaman.
 2. Ikut nama pada skrin. Tekan dan tahan untuk melihat peranan; lepaskan untuk menutupnya.
 3. Krew menjawab tiga soalan darab. Penyamar mencari nombor yang bukan gandaan. Setiap giliran berlangsung 20 saat, termasuk masa penyegerakan selepas tugasan selesai.
-4. Bateri dan petunjuk tanpa nama dipaparkan selepas semua giliran. Bincang sehingga 90 saat, kemudian undi seorang demi seorang.
+4. Bateri dan petunjuk tanpa nama dipaparkan selepas semua giliran. Bincang sehingga 90 saat, kemudian undi seorang demi seorang. Pemain hanya boleh memilih pemain aktif yang lain; undi diri sendiri tidak dibenarkan.
 5. Undi seri atau undi “Langkau” tertinggi menyebabkan tiada penyingkiran. Pemain yang disingkirkan menjadi pemerhati.
 
 Krew menang jika bateri mencapai 100% atau penyamar disingkirkan. Penyamar menang apabila bateri mencapai 0% atau kekal aktif selepas undian pusingan ketiga. Keputusan bateri didahulukan sebelum mesyuarat.
 
+## Kemas kini v1.0.1
+
+- Gaya hover terhad kepada tetikus. Jawapan baharu memerlukan tekan dan lepas pada soalan yang sama; sentuhan lama dan klik sintetik tidak terbawa ke soalan seterusnya.
+- Calon undian mengecualikan pengundi sendiri. Peraturan sama disahkan semasa merekod dan mengira undi.
+- Paparan mengikut tinggi ruang skrin semasa, tanpa tatal halaman. Lobi dua langkah, nama berhalaman, bantuan berhalaman, dan susunan melintang untuk telefon dipusingkan. Peta stesen disembunyikan pada skrin permainan telefon untuk memberi ruang kepada soalan.
+- Footer serta arahan berulang dibuang. Maklumat peraturan kekal dalam butang bantuan.
+
 ## Naik taraf daripada spesifikasi asal
 
-| Perkara | Pelaksanaan v1.0.0 |
+| Perkara | Pelaksanaan v1.0.1 |
 | --- | --- |
 | Penjana soalan boleh tersangkut pada pengganda 1 | Pilihan jawapan dibina daripada himpunan terhingga dan dikocok Fisher–Yates |
 | Sabotaj Sifir 1 tiada jawapan bukan gandaan | Sifir 1 kekal untuk krew; sabotaj memilih sifir terpilih yang lebih besar daripada 1 |
@@ -55,13 +62,14 @@ Uji logik permainan dengan Node.js 20+: `npm test`. Tidak perlu `npm install`: e
 
 Pada iPhone, buka laman HTTPS dalam Safari, pilih **Share → Add to Home Screen**. Pada Android, gunakan pilihan pemasangan aplikasi pelayar jika tersedia. Permainan boleh dibuka semula tanpa internet selepas semua aset berjaya dicache pada lawatan pertama. Fon web mempunyai pengganti tempatan. Pengesahan akaun untuk URL pratonton persendirian mungkin masih memerlukan internet; GitHub Pages biasa tidak memerlukan akaun untuk bermain.
 
-Kemas kini service worker menunggu semua tab versi lama ditutup supaya misi aktif tidak terganggu. Apabila menerbitkan versi baharu, tukar versi cache dalam `dist/sw.js` serta nombor versi paparan dan `package.json`.
+Service worker mengaktifkan cache baharu selepas semua aset dimuat turun. Aplikasi versi ini memuat semula secara automatik hanya ketika berada di lobi atau skrin keputusan; sesi aktif diteruskan. Untuk menaik taraf daripada v1.0.0, tutup dan buka semula aplikasi selepas kemas kini dimuat turun. Apabila menerbitkan versi baharu, tukar versi cache dalam `dist/sw.js` serta nombor versi paparan dan `package.json`.
 
 ## Struktur
 
 - `dist/index.html` — rangka semantik dan taklimat permainan.
 - `dist/style.css` — reka bentuk responsif, safe area iPhone dan mod kurang pergerakan.
 - `dist/app.js` — skrin, pemasa, tirai privasi dan interaksi.
+- `dist/input.js` — pengesahan sentuhan mengikut soalan dan pointer.
 - `dist/game.js` — penjana matematik, skor, pusingan dan undian.
 - `dist/scene.js` — adegan Phaser, sprite watak asli dan animasi.
 - `dist/assets/station.png` — latar stesen yang dijana untuk projek ini.

@@ -18,19 +18,12 @@
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <a class="brand" href="./" aria-label="Sifir Kami, halaman utama"><span class="brand-mark">×</span><span>SIFIR<span class="brand-light">KAMI</span><small>MISI ANGKASA</small></span></a>
-      <div class="top-actions"><span class="version">v1.0.0</span><button id="sound-button" class="icon-button" aria-label="Hidupkan bunyi" aria-pressed="false"></button><button id="help-button" class="icon-button" aria-label="Cara bermain">?</button></div>
+      <a class="brand" href="./" aria-label="Sifir Kami, halaman utama"><span class="brand-mark">×</span><span>SIFIR<span class="brand-light">KAMI</span></span></a>
+      <div class="top-actions"><span class="version">v1.0.1</span><button id="sound-button" class="icon-button" aria-label="Hidupkan bunyi" aria-pressed="false"></button><button id="help-button" class="icon-button" aria-label="Cara bermain">?</button></div>
     </header>
     <main id="app"></main>
-    <footer class="footer"><span>Fikir pantas. Percaya dengan bijak.</span><span>4–8 pemain <i></i> 1 peranti</span></footer>
   </div>
-  <dialog id="help-dialog"><div class="dialog-head"><h2>Taklimat angkasa</h2><button id="close-help" class="icon-button" aria-label="Tutup">×</button></div><div class="help-content">
-    <p>Satu kapal. Satu penyamar. Bolehkah kamu selesaikan misi bersama?</p>
-    <ol><li><b>Bentuk pasukan.</b> Pilih sekurang-kurangnya 2 sifir dan masukkan 4–8 nama.</li><li><b>Simpan rahsia.</b> Serahkan peranti mengikut nama. Tekan dan tahan untuk melihat peranan. Ada tepat seorang penyamar.</li><li><b>Jalankan tugasan.</b> Krew menjawab 3 soalan darab dalam 20 saat. Penyamar memburu nombor yang bukan gandaan. Semua orang mendapat 20 saat sebelum giliran tamat.</li><li><b>Periksa kapal.</b> Selepas semua giliran, lihat perubahan bateri dan petunjuk tanpa nama.</li><li><b>Bincang dan undi.</b> Bincang sehingga 90 saat. Setiap pemain aktif mengundi secara rahsia. Undi seri atau “Langkau” terbanyak bermaksud tiada penyingkiran.</li></ol>
-    <div class="help-rule"><b>Krew menang</b><p>Bateri mencapai 100% atau penyamar disingkirkan.</p></div><div class="help-rule"><b>Penyamar menang</b><p>Bateri mencapai 0% atau masih aktif selepas undian pusingan ketiga.</p></div>
-    <details><summary>Bagaimana bateri dikira?</summary><p>Bateri bermula pada 50%. Pada setiap pusingan, jumlah cas maksimum semua krew ialah +45%, dibahagikan sama rata antara krew aktif. Setiap jawapan betul menyumbang satu bahagian, dan kombo 3/3 memberikan dua bahagian tambahan. Sabotaj berjaya: −25%. Sabotaj tersilap: +5%. Tiada jawapan: 0%.</p><p>Semua perubahan dikira serentak pada akhir pusingan supaya turutan pemain tidak menentukan kemenangan. Krew tersingkir menjadi pemerhati dan tidak lagi mengundi. Sifir 1 hanya untuk soalan krew kerana semua nombor bulat ialah gandaan 1.</p></details>
-    <p class="muted">Berselisih pendapat dengan sopan. Menjadi penyamar ialah sebahagian permainan—bukan salah sesiapa.</p>
-  </div></dialog>
+  <dialog id="help-dialog"><div class="dialog-head"><h2 id="help-title">Cara bermain</h2><button id="close-help" class="icon-button" aria-label="Tutup">×</button></div><div id="help-body" class="help-content"></div><div class="help-navigation"><button id="help-prev" class="secondary">Kembali</button><span id="help-page"></span><button id="help-next" class="primary">Seterusnya</button></div></dialog>
   <noscript>Hidupkan JavaScript untuk bermain Sifir Kami.</noscript>
 </body>
 </html>
