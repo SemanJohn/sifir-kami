@@ -47,11 +47,17 @@ test('three typed sabotage attempts preserve Classic battery balance',()=>{
   for(const p of g.players)recordTurn(g,p.id,p.id===spy.id?{hits:1,backfires:2,answered:3}:{correct:0,answered:0});
   settleRound(g);assert.equal(g.battery,45);
 });
-test('task screen requires typed answers and offers immediate turn completion',()=>{
+test('all roles receive the same typed multiplication task and can finish immediately',()=>{
   const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
   const draw=source.slice(source.indexOf('function drawQuestion'),source.indexOf('function tickTask'));
   assert.match(draw,/q\.mode='keypad'/);assert.match(draw,/class="keypad"/);assert.doesNotMatch(draw,/class="answer-grid"/);
+  assert.doesNotMatch(draw,/IMPOSTOR|impostorQuestion|Bukan sifir|bukan gandaan/);
   assert.match(source,/data-action="task-finish">Tamat giliran/);
+});
+test('ANU is a persisted lobby option and guarantees one missing-factor question per turn',()=>{
+  const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+  assert.match(source,/data-lobby-action="anu"/);assert.match(source,/anuStep:game\.config\.anu\?Math\.floor\(Math\.random\(\)\*3\):-1/);
+  assert.match(source,/task\.step===task\.anuStep/);assert.equal(normalizeSettings({anu:true}).anu,true);assert.equal(normalizeSettings({anu:'true'}).anu,false);
 });
 test('lobby controls live over the responsive station canvas',()=>{
   const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
@@ -69,10 +75,9 @@ test('settings are bounded and malformed stored settings fall back safely',()=>{
   const c=normalizeSettings({maxRounds:99,turnDuration:-1,discussionDuration:999,startBattery:100,keypadFromRound:99,timerOff:true});
   assert.equal(c.maxRounds,6);assert.equal(c.turnDuration,10);assert.equal(c.discussionDuration,240);assert.equal(c.startBattery,80);assert.equal(c.keypadFromRound,99);assert.equal(c.timerOff,true);
 });
-test('typed sabotage accepts any valid nonmultiple in range, never table multiples',()=>{
-  for(let table=2;table<=12;table++)for(let n=0;n<=table*12+2;n++)assert.equal(checkTaskAnswer({table,mode:'keypad'},n,true),n>=2&&n<=table*12&&n%table!==0);
-  assert.equal(checkTaskAnswer({table:6,answer:24,mode:'choice'},25,true),false);
-  assert.equal(checkTaskAnswer({table:6,answer:24,mode:'keypad'},24,false),true);
+test('typed multiplication uses the exact mathematical answer for every role',()=>{
+  assert.equal(checkTaskAnswer({table:6,multiplier:4,answer:24,mode:'keypad'},24),true);
+  assert.equal(checkTaskAnswer({table:6,multiplier:4,answer:24,mode:'keypad'},25),false);
 });
 test('adaptive tables favor mistakes and generated options remain unique',()=>{
   const stats={2:{seen:10,wrong:0},8:{seen:10,wrong:10}};let hard=0;
@@ -87,6 +92,11 @@ test('reports separate arithmetic from sabotage and do not claim mastery without
   const records=[{playerId:0,kind:'crew',table:6,correct:true,given:12,ms:2000},{playerId:0,kind:'crew',table:6,correct:false,given:null,ms:5000},{playerId:1,kind:'sabotage',table:8,correct:true,given:17,ms:3000}];
   const r=buildReport(records,players);assert.equal(r.crew.accuracy,50);assert.equal(r.sabotage.accuracy,100);assert.equal(r.crew.avgSeconds,2);assert.equal(r.byPlayer[2].accuracy,null);assert.deepEqual(r.byPlayer[2].tables,[]);
   assert.deepEqual(tableStatsFor(records,0),{6:{seen:2,wrong:1}});assert.deepEqual(tableStatsFor(records,1),{});
+});
+test('an impostor multiplication result contributes to the class and player report',()=>{
+  const players=[{id:0,name:'Ali',role:'CREW'},{id:1,name:'Siti',role:'IMPOSTOR'}];
+  const records=[{playerId:0,kind:'crew',table:6,correct:true,given:12,ms:2000},{playerId:1,kind:'crew',table:8,correct:false,given:17,ms:3000}];
+  const report=buildReport(records,players);assert.equal(report.crew.attempts,2);assert.equal(report.crew.accuracy,50);assert.equal(report.byPlayer[1].attempts,1);assert.equal(report.byPlayer[1].accuracy,0);
 });
 test('CSV quotes names, blocks formula injection and distinguishes timeouts',()=>{
   const csv=toCsv([{round:1,playerName:'=SUM(1,2)',role:'CREW',kind:'crew',mode:'keypad',table:2,multiplier:3,answer:6,given:null,correct:false,ms:1200},{playerName:'Ali "A"\nB',given:2,correct:true}]);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {newGame,crewQuestion,impostorQuestion,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,voteCandidates,canVoteFor,castVote} from '../dist/game.js';
+import {newGame,crewQuestion,anuQuestion,checkTaskAnswer,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,voteCandidates,canVoteFor,castVote} from '../dist/game.js';
 import {createAnswerInput,deviceClass} from '../dist/input.js';
 const names=n=>Array.from({length:n},(_,i)=>`Pemain ${i+1}`);
 const make=(n=4)=>newGame(names(n),[1,2,3,4],()=>0);
@@ -12,11 +12,12 @@ test('finite unique crew options for all tables and endpoint RNG values',()=>{
     const q=crewQuestion([table],()=>r);assert.equal(q.options.length,4);assert.equal(new Set(q.options).size,4);assert.ok(q.options.includes(q.answer));assert.ok(q.options.every(x=>x>0));assert.equal(q.answer,q.table*q.multiplier);
   }
 });
-test('sabotage always has exactly one nonmultiple and never selects table one',()=>{
-  for(let table=2;table<=12;table++)for(const r of [0,.4,.999999]){
-    const q=impostorQuestion([1,table],()=>r);assert.equal(q.table,table);assert.equal(q.options.length,4);assert.equal(new Set(q.options).size,4);assert.deepEqual(q.options.filter(x=>x%table!==0),[q.answer]);
-  }
-  assert.throws(()=>impostorQuestion([1]));
+test('ANU hides either factor while preserving the multiplication fact',()=>{
+  const base=crewQuestion([7],()=>.5);
+  const left=anuQuestion(base,()=>0),right=anuQuestion(base,()=>.9);
+  assert.equal(left.missing,'table');assert.equal(left.answer,7);assert.equal(left.product,base.answer);assert.ok(checkTaskAnswer(left,7));
+  assert.equal(right.missing,'multiplier');assert.equal(right.answer,base.multiplier);assert.equal(right.product,base.answer);assert.ok(checkTaskAnswer(right,base.multiplier));
+  assert.throws(()=>anuQuestion({table:7}));
 });
 test('configuration rejects invalid rosters and fewer than two tables',()=>{
   assert.ok(validateConfig(names(3),[2,3]));assert.ok(validateConfig(names(9),[2,3]));assert.ok(validateConfig(['Ali','ali','B','C'],[2,3]));assert.ok(validateConfig(names(4),[1]));assert.equal(validateConfig(names(8),[1,2]),'');

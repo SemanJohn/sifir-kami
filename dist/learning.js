@@ -1,5 +1,5 @@
 // Adaptive learning, diagnostics and CSV inspired by the supplied Claude edition.
-// Arithmetic and sabotage results stay separate: they measure different tasks.
+// All roles answer multiplication questions; role remains available for teacher review.
 export function tableStatsFor(records,playerId,kind='crew') {
   const stats={};
   for(const r of records){if(r.playerId!==playerId||r.kind!==kind)continue;const s=stats[r.table]??={seen:0,wrong:0};s.seen++;if(!r.correct)s.wrong++;}
@@ -30,8 +30,8 @@ function csvCell(value){
   return '"'+s.replace(/"/g,'""')+'"';
 }
 export function toCsv(records){
-  const rows=[['pusingan','nama','peranan','jenis','mod','sifir','pengganda','jawapan_betul_atau_contoh','jawapan_murid','status','masa_saat']];
-  for(const r of records)rows.push([r.round,r.playerName,r.role==='CREW'?'Krew':'Penyamar',r.kind==='crew'?'Sifir':'Bukan gandaan',r.mode==='keypad'?'Taip':'Pilihan',r.table,r.multiplier??'',r.answer,r.given??'',r.given===null?'MASA TAMAT':r.correct?'BETUL':'SALAH',r.ms>0?(r.ms/1000).toFixed(1):'']);
+  const rows=[['pusingan','nama','peranan','jenis','mod','sifir','pengganda','jawapan_betul','jawapan_murid','status','masa_saat']];
+  for(const r of records)rows.push([r.round,r.playerName,r.role==='CREW'?'Krew':'Penyamar',r.anu?'ANU':'Sifir',r.mode==='keypad'?'Taip':'Pilihan',r.table,r.multiplier??'',r.answer,r.given??'',r.given===null?'MASA TAMAT':r.correct?'BETUL':'SALAH',r.ms>0?(r.ms/1000).toFixed(1):'']);
   return rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
 }
 export function downloadCsv(records){

@@ -22,15 +22,12 @@ export function crewQuestion(tables, rng=Math.random, stats=null) {
   const pool=[...new Set(candidates)].filter(v=>v>0&&v!==answer);
   return {table,multiplier,answer,options:shuffled([answer,...shuffled(pool,rng).slice(0,3)],rng)};
 }
-export function impostorQuestion(tables, rng=Math.random) {
-  const eligible=tables.filter(t=>t>1);
-  if(!eligible.length) throw new Error('Sabotaj memerlukan sifir 2 hingga 12.');
-  const table=randomItem(eligible,rng), multiples=shuffled(Array.from({length:12},(_,i)=>table*(i+1)),rng).slice(0,3);
-  const answer=table*(1+Math.floor(rng()*10)) + 1+Math.floor(rng()*(table-1));
-  return {table,answer,options:shuffled([...multiples,answer],rng)};
+export function anuQuestion(question,rng=Math.random){
+  if(!question||!Number.isInteger(question.table)||!Number.isInteger(question.multiplier))throw Error('Soalan ANU tidak sah.');
+  const missing=rng()<.5?'table':'multiplier',product=question.table*question.multiplier;
+  return {...question,anu:true,missing,product,answer:missing==='table'?question.table:question.multiplier,options:[]};
 }
-export function checkTaskAnswer(question,value,spy=false){
-  if(spy&&question.mode==='keypad')return Number.isInteger(value)&&value>=2&&value<=question.table*12&&value%question.table!==0;
+export function checkTaskAnswer(question,value){
   return value===question.answer;
 }
 export function newGame(names,tables,rng=Math.random,settings={}) {
@@ -60,17 +57,18 @@ export function settleRound(game,rng=Math.random) {
   const before=game.battery;
   const crew=game.turnResults.filter(t=>game.players.find(p=>p.id===t.playerId).role==='CREW');
   const spies=game.turnResults.filter(t=>game.players.find(p=>p.id===t.playerId).role==='IMPOSTOR');
-  const spy=spies.find(t=>t.success===true)||spies[0];
-  const total=crew.reduce((s,t)=>s+t.correct,0), perfect=crew.filter(t=>t.correct===3).length;
+  const total=game.turnResults.reduce((s,t)=>s+t.correct,0), perfect=crew.filter(t=>t.correct===3).length;
+  const totalQuestions=game.turnResults.length*3;
+  const interference=spies.reduce((s,t)=>s+t.hits,0),backfires=spies.reduce((s,t)=>s+t.backfires,0);
   const crisis=crisisActive(game)?(perfect>0?6:-8):0;
   const delta=game.turnResults.reduce((sum,t)=>sum+t.delta,0)+crisis;
   game.battery=Math.max(0,Math.min(100,Math.round((before+delta)*10)/10));
   game.logs=shuffled([
-    {kind:'info',text:`${total} daripada ${crew.length*3} soalan sifir berjaya diselesaikan.`},
+    {kind:'info',text:`${total} daripada ${totalQuestions} soalan sifir dijawab tepat.`},
     {kind:crisis<0?'warn':'good',text:crisis?crisis>0?`Krisis dibaiki! ${perfect} kombo sempurna. Bonus kapal +6%.`:'Krisis tidak dibaiki. Kapal kehilangan 8%.':`${perfect} modul menerima cas kombo sempurna.`},
-    game.config.mode==='plus'?{kind:spies.some(t=>t.hits)?'warn':'info',text:`${spies.reduce((s,t)=>s+t.hits,0)} gangguan berjaya; ${spies.reduce((s,t)=>s+t.backfires,0)} cubaan tersilap. Jejak stesen dirahsiakan.`}:spy?.success===true?{kind:'warn',text:`Nombor sesat ${spy.intruder} ditemui dalam modul Sifir ${spy.table}. Kapal kehilangan 25% bateri!`}:spy?.success===false?{kind:'good',text:'Cubaan sabotaj tersilap! Sistem memulihkan 5% bateri.'}:{kind:'info',text:'Tiada gangguan berjaya dikesan pada pusingan ini.'}
+    interference?{kind:'warn',text:`${interference} gangguan tenaga dikesan; ${backfires} cubaan tersilap. Jejak stesen dirahsiakan.`}:backfires?{kind:'good',text:`${backfires} cubaan gangguan tersilap. Sistem memulihkan tenaga kapal.`}:{kind:'info',text:'Tiada gangguan tenaga berjaya dikesan pada pusingan ini.'}
   ],rng);
-  game.history.push({round:game.round,before,after:game.battery,delta,crisis,correct:total,total:crew.length*3});
+  game.history.push({round:game.round,before,after:game.battery,delta,crisis,correct:total,total:totalQuestions});
   if(game.battery>=100){game.winner='CREW';game.reason='Bateri kapal berjaya dicas hingga 100%.';}
   else if(game.battery<=0){game.winner='IMPOSTOR';game.reason='Bateri kapal telah habis.';}
   return game;

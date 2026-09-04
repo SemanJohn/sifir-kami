@@ -1,5 +1,5 @@
 // Classroom controls adapted from the supplied Claude edition (MIT).
-export const DEFAULT_SETTINGS={mode:'classic',maxRounds:3,turnDuration:25,discussionDuration:90,startBattery:50,adaptive:true,keypadFromRound:2,timerOff:false,reduceMotion:false,largeText:false};
+export const DEFAULT_SETTINGS={mode:'classic',maxRounds:3,turnDuration:25,discussionDuration:90,startBattery:50,adaptive:true,anu:false,keypadFromRound:2,timerOff:false,reduceMotion:false,largeText:false};
 export function normalizeSettings(value={}) {
   if(!value||typeof value!=='object')value={};
   const out={...DEFAULT_SETTINGS};
@@ -7,7 +7,7 @@ export function normalizeSettings(value={}) {
   for(const [key,min,max] of [['maxRounds',2,6],['turnDuration',10,90],['discussionDuration',30,240],['startBattery',20,80]]) {
     if(Number.isFinite(Number(value[key])))out[key]=Math.max(min,Math.min(max,Math.round(Number(value[key]))));
   }
-  for(const key of ['adaptive','timerOff','reduceMotion','largeText'])if(typeof value[key]==='boolean')out[key]=value[key];
+  for(const key of ['adaptive','anu','timerOff','reduceMotion','largeText'])if(typeof value[key]==='boolean')out[key]=value[key];
   if([1,2,3,99].includes(Number(value.keypadFromRound)))out.keypadFromRound=Number(value.keypadFromRound);
   return out;
 }

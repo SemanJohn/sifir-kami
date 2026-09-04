@@ -1,4 +1,4 @@
-import {COLORS,DEFAULT_NAMES,validateConfig,newGame,livePlayers,crewQuestion,impostorQuestion,recordTurn,settleRound,voteResult,nextRound,shuffled,voteCandidates,canVoteFor,castVote,safeRound,crisisActive,checkTaskAnswer} from './game.js';
+import {COLORS,DEFAULT_NAMES,validateConfig,newGame,livePlayers,crewQuestion,anuQuestion,recordTurn,settleRound,voteResult,nextRound,shuffled,voteCandidates,canVoteFor,castVote,safeRound,crisisActive,checkTaskAnswer} from './game.js';
 import {createAnswerInput,deviceClass} from './input.js';
 import {avatarURLs,startStation} from './scene.js';
 import {normalizeSettings,impostorCount,loadRosters,saveRoster} from './settings.js';
@@ -8,7 +8,7 @@ const $=s=>document.querySelector(s);
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n.toFixed(1)).toLocaleString('ms-MY');
 let names=[...DEFAULT_NAMES],tables=[2,3,4,5];
-let settings=normalizeSettings(),settingsPage=0,reportPage=0,reportKind='crew',reportTablePage=0;
+let settings=normalizeSettings(),settingsPage=0,reportPage=0,reportTablePage=0;
 try {const saved=JSON.parse(localStorage.getItem('sifir-kami-config'));if(saved&&!validateConfig(saved.names,saved.tables)){names=saved.names;tables=saved.tables;}} catch {}
 try {settings=normalizeSettings(JSON.parse(localStorage.getItem('sifir-kami-settings')||'{}'));}catch{}
 let game=null,screen='LOBBY',roleIndex=0,turnIndex=0,turnOrder=[],voterIndex=0,voterOrder=[],selectedVote=null,hasSeenRole=false,holding=false,task=null,clock=null,epoch=0,meetingDeadline=0,lastVoteResult=null,soundOn=false,audioCtx=null,station=null;
@@ -25,11 +25,11 @@ $('#sound-button').addEventListener('click',()=>{soundOn=!soundOn;updateSound();
 $('#settings-button').addEventListener('click',()=>{if(screen==='LOBBY'){settingsPage=0;renderSettings();}});
 const helpPages=[
   ['Misi pasukan','<p><b>4–8 pemain · 1 peranti.</b> Tekan ＋ untuk menambah pemain dan tekan watak untuk ubah nama atau buang.</p><p>Pilih sifir dalam skrin kapal. Selepas misi bermula, tekan dan tahan untuk melihat peranan.</p><p><b>Krew menang:</b> bateri 100% atau semua penyamar disingkirkan.</p><p><b>Penyamar menang:</b> bateri 0% atau masih aktif selepas undian terakhir.</p>'],
-  ['Tugasan rahsia','<p>Lalai <b>25 saat</b> setiap giliran. Masa boleh diubah atau dimatikan.</p><p>Semua pemain menjawab <b>3 tugasan</b> dengan menaip sendiri pada papan nombor.</p><p><b>Krew:</b> kira jawapan sifir. <b>Penyamar:</b> taip satu nombor yang bukan gandaan sifir sasaran.</p><p>Gunakan ⌫ untuk memadam dan ✓ untuk menghantar jawapan.</p>'],
+  ['Tugasan rahsia','<p>Lalai <b>25 saat</b> setiap giliran. Masa boleh diubah atau dimatikan.</p><p>Semua pemain, termasuk penyamar, menjawab <b>3 soalan darab yang sama jenis</b> dengan menaip sendiri.</p><p>Jika <b>ANU</b> diaktifkan, satu soalan setiap giliran meminta faktor yang hilang, contohnya 7 × ? = 56.</p><p>Gunakan ⌫ untuk memadam dan ✓ untuk menghantar jawapan.</p>'],
   ['Bincang & undi','<p>Lalai <b>90 saat</b> untuk berbincang. Log tidak mendedahkan nama pelaku.</p><p>Setiap pemain aktif memilih pemain lain atau <b>Langkau</b>. Undi diri sendiri dilarang.</p><p>Undi seri atau Langkau terbanyak: tiada penyingkiran.</p><p>Pemain tersingkir menjadi pemerhati.</p>'],
   ['Mod Misi+','<p><b>7–8 pemain:</b> dua penyamar yang saling mengenali.</p><p><b>Pusingan 1 selamat:</b> undian hanya menanda syak, bukan menyingkir.</p><p><b>Krisis mulai pusingan 2:</b> sekurang-kurangnya satu kombo krew 3/3 memberi +6%. Jika tiada, bateri −8%.</p><p>Penyamar juga menang apabila bilangan mereka menyamai krew.</p>'],
-  ['Cas bateri','<p>Lalai bateri <b>50%</b>. Cas maksimum semua krew aktif ialah <b>+45%</b> setiap pusingan.</p><p>Jawapan betul: satu bahagian cas. Kombo 3/3: dua bahagian tambahan.</p><p>Jumlah sabotaj sempurna ialah −25%; semua cubaan tersilap membaiki +5%. Nilai itu dibahagi adil antara 3 tugasan dan semua penyamar aktif.</p><p>Perubahan dikira serentak di akhir pusingan.</p>'],
-  ['Untuk guru','<p>Buka <b>⚙ Tetapan guru</b> dari lobi untuk mod, pemasa, soalan adaptif dan kumpulan tersimpan.</p><p><b>Laporan guru</b> muncul selepas misi tamat. Semak murid dan sifir satu halaman demi satu.</p><p>Sifir darab dan tugas bukan gandaan dilaporkan berasingan. Eksport CSV sebelum memuat semula atau memulakan misi baharu.</p>']
+  ['Cas bateri','<p>Lalai bateri <b>50%</b>. Cas maksimum semua krew aktif ialah <b>+45%</b> setiap pusingan.</p><p>Jawapan betul krew: satu bahagian cas. Kombo 3/3: dua bahagian tambahan.</p><p>Tiga jawapan tepat penyamar memberi jumlah −25%; tiga jawapan salah memulihkan +5%. Nilai itu dibahagi adil antara semua penyamar aktif.</p><p>Perubahan dikira serentak di akhir pusingan.</p>'],
+  ['Untuk guru','<p>Buka <b>⚙ Tetapan guru</b> dari lobi untuk mod, pemasa, soalan adaptif dan kumpulan tersimpan.</p><p><b>Laporan guru</b> muncul selepas misi tamat. Prestasi sifir semua murid, termasuk penyamar, direkodkan.</p><p>Aktifkan <b>ANU</b> bersama pilihan sifir untuk menguji kefahaman faktor hilang. Eksport CSV sebelum memuat semula atau memulakan misi baharu.</p>']
 ];
 function renderHelp(){const [title,body]=helpPages[helpPage];$('#help-title').textContent=title;$('#help-body').innerHTML=body;$('#help-page').textContent=`${helpPage+1} / ${helpPages.length}`;$('#help-prev').disabled=helpPage===0;$('#help-next').textContent=helpPage===helpPages.length-1?'Selesai':'Seterusnya';}
 $('#help-button').addEventListener('click',()=>{helpPage=0;renderHelp();$('#help-dialog').showModal();});
@@ -78,16 +78,16 @@ function refreshLobby(){
   if(screen!=='LOBBY')return;
   header('Sediakan misi','',`${settings.mode==='plus'?'Misi+':'Klasik'} · ${impostorCount(names.length,settings.mode)} penyamar`);
   $('#station-title').textContent=`${settings.mode==='plus'?'MISI+':'KLASIK'} · ${impostorCount(names.length,settings.mode)} PENYAMAR`;
-  $('#station-meta').textContent=`${names.length}/8 PEMAIN · ${tables.length} SIFIR`;
+  $('#station-meta').textContent=`${names.length}/8 PEMAIN · ${tables.length} SIFIR${settings.anu?' + ANU':''}`;
   renderLobbyControls();validateLobby();syncRoster();persist();
   station?.scene.setPlayerHandler(openPlayerEditor);
 }
 function renderLobbyControls(){
   const hud=$('#lobby-hud');hud.hidden=false;
-  hud.innerHTML=`<div class="lobby-hud-actions"><button data-lobby-action="add" ${names.length>=8?'disabled':''} aria-label="Tambah pemain"><b>＋</b><span>Tambah pemain</span></button><button data-lobby-action="tables" aria-expanded="${lobbySheet==='tables'}"><b>×</b><span>Sifir</span><i>${tables.length}</i></button></div><p>${names.length<8?'Tekan watak untuk ubah nama atau buang':'Pasukan lengkap · tekan watak untuk ubah nama'}</p>`;
+  hud.innerHTML=`<div class="lobby-hud-actions"><button data-lobby-action="add" ${names.length>=8?'disabled':''} aria-label="Tambah pemain"><b>＋</b><span>Tambah pemain</span></button><button data-lobby-action="tables" aria-expanded="${lobbySheet==='tables'}"><b>×</b><span>Sifir</span><i>${tables.length}${settings.anu?'+A':''}</i></button></div><p>${names.length<8?'Tekan watak untuk ubah nama atau buang':'Pasukan lengkap · tekan watak untuk ubah nama'}</p>`;
   const sheet=$('#lobby-sheet');
   if(lobbySheet==='tables'){
-    sheet.hidden=false;sheet.innerHTML=`<div class="station-sheet-head"><div><span>Tetapan misi</span><h2>Pilih sifir</h2></div><button data-lobby-action="close" aria-label="Tutup pilihan sifir">×</button></div><div class="station-presets"><button data-lobby-action="preset" data-preset="basic">Asas</button><button data-lobby-action="preset" data-preset="hard">Sukar</button><button data-lobby-action="preset" data-preset="all">Semua</button></div><div class="station-tables">${Array.from({length:12},(_,i)=>i+1).map(n=>`<button data-lobby-action="table" data-table="${n}" aria-pressed="${tables.includes(n)}" aria-label="Sifir ${n}">${n}</button>`).join('')}</div><p class="station-sheet-note">${tables.length<2?'Pilih sekurang-kurangnya 2 sifir.':`${tables.length} sifir dipilih.`}</p>`;
+    sheet.hidden=false;sheet.innerHTML=`<div class="station-sheet-head"><div><span>Tetapan misi</span><h2>Pilih sifir</h2></div><button data-lobby-action="close" aria-label="Tutup pilihan sifir">×</button></div><div class="station-presets"><button data-lobby-action="preset" data-preset="basic">Asas</button><button data-lobby-action="preset" data-preset="hard">Sukar</button><button data-lobby-action="preset" data-preset="all">Semua</button></div><div class="station-tables">${Array.from({length:12},(_,i)=>i+1).map(n=>`<button data-lobby-action="table" data-table="${n}" aria-pressed="${tables.includes(n)}" aria-label="Sifir ${n}">${n}</button>`).join('')}<button class="anu-toggle" data-lobby-action="anu" aria-pressed="${settings.anu}" aria-label="Soalan ANU">ANU · Cari faktor hilang</button></div><p class="station-sheet-note">${tables.length<2?'Pilih sekurang-kurangnya 2 sifir.':`${tables.length} sifir dipilih${settings.anu?' · ANU aktif':''}.`}</p>`;
   }else if(lobbySheet==='player'&&Number.isInteger(editingPlayerId)&&names[editingPlayerId]!==undefined){
     const id=editingPlayerId;sheet.hidden=false;sheet.innerHTML=`<div class="station-sheet-head player-edit-head">${avatar({id},'avatar-small')}<label><span>Nama pemain</span><input id="stage-player-name" maxlength="20" value="${escapeHTML(names[id])}" autocomplete="off" spellcheck="false"></label><button data-lobby-action="close" aria-label="Tutup suntingan nama">×</button></div><p id="stage-player-error" class="error" role="status"></p><div class="player-edit-actions">${names.length>4?'<button class="danger-button" data-lobby-action="remove">− Buang pemain</button>':''}<button class="primary" data-lobby-action="save">Simpan nama</button></div>`;
   }else sheet.hidden=true;
@@ -113,7 +113,7 @@ function renderRole(){
   b.addEventListener('keyup',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();hideRole();}});
   b.addEventListener('blur',hideRole);b.addEventListener('contextmenu',e=>e.preventDefault());
 }
-function showRole(){if(screen!=='ROLE')return;holding=true;hasSeenRole=true;const p=game.players[roleIndex],spy=p.role==='IMPOSTOR',partners=game.players.filter(x=>x.role==='IMPOSTOR'&&x.id!==p.id);$('#role-zone').className='role-zone revealed'+(spy?' spy':'');$('#role-zone').innerHTML=`<div><div class="role-title">${spy?'Kamu penyamar!':'Kamu krew angkasa!'}</div><p>${spy?'Cari nombor BUKAN gandaan. Rahsiakan identiti hingga misi tamat.':'Jawab sifir untuk mengecas kapal. Bincang dan kesan penyamar.'}${spy&&partners.length?`<br><b>Rakan penyamar: ${partners.map(x=>escapeHTML(x.name)).join(', ')}</b>`:''}</p></div>`;$('#role-next').disabled=true;}
+function showRole(){if(screen!=='ROLE')return;holding=true;hasSeenRole=true;const p=game.players[roleIndex],spy=p.role==='IMPOSTOR',partners=game.players.filter(x=>x.role==='IMPOSTOR'&&x.id!==p.id);$('#role-zone').className='role-zone revealed'+(spy?' spy':'');$('#role-zone').innerHTML=`<div><div class="role-title">${spy?'Kamu penyamar!':'Kamu krew angkasa!'}</div><p>${spy?'Jawab sifir seperti biasa. Setiap jawapan tepat melakukan sabotaj secara rahsia.':'Jawab sifir untuk mengecas kapal. Bincang dan kesan penyamar.'}${spy&&partners.length?`<br><b>Rakan penyamar: ${partners.map(x=>escapeHTML(x.name)).join(', ')}</b>`:''}</p></div>`;$('#role-next').disabled=true;}
 function hideRole(){holding=false;const z=$('#role-zone');if(z){z.className='role-zone';z.innerHTML='<div><div class="lock-icon">◇</div><p>Peranan kamu dikunci</p></div>';if($('#role-next'))$('#role-next').disabled=!hasSeenRole;}}
 function beginRound(){turnOrder=shuffled(livePlayers(game).map(p=>p.id));turnIndex=0;renderTransit();}
 function currentPlayer(){return game.players.find(p=>p.id===turnOrder[turnIndex]);}
@@ -122,25 +122,26 @@ function renderTransit(){
   panel.innerHTML=`<section class="panel private-card"><div class="eyebrow">Serahkan peranti · ${turnIndex+1}/${turnOrder.length}</div>${avatar(p)}<h2>${escapeHTML(p.name)}</h2><p>Hanya kamu boleh melihat skrin.<br><b>${game.config.timerOff?'Tanpa pemasa':game.config.turnDuration+' saat'}</b> untuk tugasan ini.${crisisActive(game)?'<br><span class="crisis-note">Krisis: krew perlu kombo 3/3.</span>':''}</p><button class="primary bottom-action" data-action="task-start">Saya sedia</button></section>`;
 }
 function startTask(){
-  base('TASK',{privateView:true});const p=currentPlayer();task={deadline:game.config.timerOff?Infinity:Date.now()+game.config.turnDuration*1000,question:null,step:0,correct:0,answered:0,locked:false,done:false,success:null,lastTable:null,intruder:null,hits:0,backfires:0,recorded:false,typed:''};
+  base('TASK',{privateView:true});const p=currentPlayer();task={deadline:game.config.timerOff?Infinity:Date.now()+game.config.turnDuration*1000,question:null,step:0,anuStep:game.config.anu?Math.floor(Math.random()*3):-1,correct:0,answered:0,locked:false,done:false,success:null,lastTable:null,intruder:null,hits:0,backfires:0,recorded:false,typed:''};
   header('Modul tenaga','',roundBadge());
   panel.innerHTML=`<section class="panel task-panel"><div class="task-header"><span>${avatar(p,'task-avatar')}${escapeHTML(p.name)}</span><span id="task-timer" class="timer-pill" role="timer">${game.config.timerOff?'∞':game.config.turnDuration+'s'}</span></div><div class="timer-track"><span id="time-fill"></span></div><div id="task-body"></div></section>`;
   drawQuestion();tickTask();if(!game.config.timerOff)clock=setInterval(tickTask,100);
 }
 function drawQuestion(){
-  const spy=currentPlayer().role==='IMPOSTOR';
-  task.question=spy?impostorQuestion(game.tables):crewQuestion(game.tables,Math.random,game.config.adaptive?tableStatsFor(game.records,currentPlayer().id):null);
+  task.question=crewQuestion(game.tables,Math.random,game.config.adaptive?tableStatsFor(game.records,currentPlayer().id):null);
+  if(task.step===task.anuStep)task.question=anuQuestion(task.question,Math.random);
   const q=task.question;q.mode='keypad';
   task.locked=false;task.recorded=false;task.typed='';task.questionStarted=performance.now();questionId++;answerInput.reset(questionId);
   document.activeElement?.blur();
   $('#task-body').className='keypad-mode';
-  $('#task-body').innerHTML=`<div class="task-kicker">${spy?`Soalan ${task.step+1} / 3 · Bukan gandaan 2–${q.table*12}`:`Soalan ${task.step+1} / 3 · Taip jawapan`}</div><div class="typed-question" data-spy="${spy}"><div class="math-prompt" aria-live="polite">${spy?`Bukan sifir ${q.table}`:`${q.table} × ${q.multiplier} =`}</div><output id="typed-answer" aria-label="Jawapan ditaip">?</output></div><div class="keypad">${['1','2','3','4','5','6','7','8','9','⌫','0','✓'].map(k=>`<button class="task-key ${k==='⌫'?'key-delete':k==='✓'?'key-submit':''}" data-action="task-key" data-question="${questionId}" data-value="${k}" aria-label="${k==='⌫'?'Padam':k==='✓'?'Sahkan jawapan':k}">${k}</button>`).join('')}</div><div class="feedback" role="status"></div>`;
+  const prompt=q.anu?(q.missing==='table'?`? × ${q.multiplier} = ${q.product}`:`${q.table} × ? = ${q.product}`):`${q.table} × ${q.multiplier} =`;
+  $('#task-body').innerHTML=`<div class="task-kicker">Soalan ${task.step+1} / 3 · ${q.anu?'Cari nilai ANU':'Taip jawapan'}</div><div class="typed-question"><div class="math-prompt" aria-live="polite">${prompt}</div><output id="typed-answer" aria-label="Jawapan ditaip">?</output></div><div class="keypad">${['1','2','3','4','5','6','7','8','9','⌫','0','✓'].map(k=>`<button class="task-key ${k==='⌫'?'key-delete':k==='✓'?'key-submit':''}" data-action="task-key" data-question="${questionId}" data-value="${k}" aria-label="${k==='⌫'?'Padam':k==='✓'?'Sahkan jawapan':k}">${k}</button>`).join('')}</div><div class="feedback" role="status"></div>`;
   if(document.documentElement.dataset.input==='keyboard')panel.querySelector('.task-key')?.focus({preventScroll:true});
 }
 function tickTask(){if(screen!=='TASK'||!task||game.config.timerOff)return;const left=Math.max(0,task.deadline-Date.now());$('#task-timer').textContent=`${Math.ceil(left/1000)}s`;$('#task-timer').classList.toggle('urgent',left<5000);$('#time-fill').style.width=`${left/(game.config.turnDuration*10)}%`;if(left<=0)finishTask();}
 function logCurrentAnswer(given,correct){
   if(task.recorded||!task.question)return;task.recorded=true;const p=currentPlayer(),q=task.question;
-  game.records.push({playerId:p.id,playerName:p.name,role:p.role,round:game.round,kind:p.role==='CREW'?'crew':'sabotage',mode:q.mode,table:q.table,multiplier:q.multiplier??null,answer:q.answer,given,correct,ms:Math.round(performance.now()-task.questionStarted)});
+  game.records.push({playerId:p.id,playerName:p.name,role:p.role,round:game.round,kind:'crew',mode:q.mode,anu:!!q.anu,table:q.table,multiplier:q.multiplier??null,answer:q.answer,given,correct,ms:Math.round(performance.now()-task.questionStarted)});
 }
 function enterDigit(key){
   if(screen!=='TASK'||task.locked||task.done||task.question.mode!=='keypad')return;
@@ -152,13 +153,13 @@ function activateTaskButton(button){if(button.dataset.action==='task-key')enterD
 function answer(value){
   if(screen!=='TASK'||task.locked||task.done)return;
   if(Date.now()>=task.deadline){finishTask();return;}
-  task.locked=true;answerInput.cancel();task.answered++;const q=task.question,spy=currentPlayer().role==='IMPOSTOR',correct=checkTaskAnswer(q,value,spy);logCurrentAnswer(value,correct);
+  task.locked=true;answerInput.cancel();task.answered++;const q=task.question,spy=currentPlayer().role==='IMPOSTOR',correct=checkTaskAnswer(q,value);logCurrentAnswer(value,correct);
   if(correct)task.correct++;
-  if(spy){task.success=correct;task.lastTable=q.table;task.intruder=q.answer;if(correct)task.hits++;else task.backfires++;}
+  if(spy){task.success=correct;task.lastTable=q.table;if(correct)task.hits++;else task.backfires++;}
   panel.querySelectorAll('.answer').forEach(b=>{b.disabled=true;const n=Number(b.dataset.value);if(n===q.answer)b.classList.add('correct');else if(n===value)b.classList.add('wrong');});
   panel.querySelectorAll('.task-key').forEach(b=>b.disabled=true);
   if($('#typed-answer'))$('#typed-answer').className=correct?'is-correct':'is-wrong';
-  $('.feedback').textContent=spy?(correct?'Tepat! Nombor itu bukan gandaan.':`${value} ialah gandaan ${q.table}. Contoh bukan gandaan: ${q.answer}.`):(correct?'Tepat! Cas tenaga direkodkan.':`Jawapannya ${q.table} × ${q.multiplier} = ${q.answer}.`);
+  $('.feedback').textContent=correct?'Tepat! Jawapan direkodkan.':`Jawapannya ${q.table} × ${q.multiplier} = ${q.anu?q.product:q.answer}.`;
   try{navigator.vibrate?.(correct?18:[28,35,28]);}catch{}
   const token=epoch;
   setTimeout(()=>{if(token!==epoch||screen!=='TASK')return;task.step++;if(task.step===3){task.done=true;neutralTask();}else drawQuestion();},850);
@@ -205,7 +206,7 @@ function renderVoteResult(){
 }
 function renderGameOver(){
   base('GAME_OVER');const crew=game.winner==='CREW',spies=game.players.filter(p=>p.role==='IMPOSTOR');
-  const total=game.history.reduce((s,h)=>s+h.total,0),correct=game.history.reduce((s,h)=>s+h.correct,0);
+  const total=game.records.length,correct=game.records.filter(r=>r.correct).length;
   header('Misi selesai','',crew?'Krew menang':'Penyamar menang');
   panel.innerHTML=`<section class="panel private-card game-over-panel"><h2>${crew?'Hebat, pasukan!':'Liciknya penyamar!'}</h2><p>${escapeHTML(game.reason)}</p><div class="winner-avatars">${spies.map(p=>avatar(p)).join('')}</div><p><b style="color:var(--red)">${spies.map(p=>escapeHTML(p.name)).join(' & ')}</b> ialah penyamar.</p><div class="stats-grid"><div class="stat"><strong>${fmt(game.battery)}%</strong><span>Bateri akhir</span></div><div class="stat"><strong>${correct}/${total}</strong><span>Sifir betul</span></div><div class="stat"><strong>${game.round}/${game.maxRounds}</strong><span>Pusingan</span></div></div><div class="end-actions"><button class="primary" data-action="report">Laporan guru</button><button class="secondary" data-action="replay">Main semula</button><button class="secondary" data-action="lobby">Kembali ke lobi</button></div></section>`;
   station?.scene.celebrate();
@@ -217,9 +218,9 @@ function reportBars(rows){
 function renderReport(){
   if(!game?.winner)return;
   base('REPORT');header('Laporan guru','',`${reportPage+1} / ${game.players.length+1}`);
-  const report=buildReport(game.records,game.players),p=report.byPlayer[reportPage-1],summary=p||(reportKind==='crew'?report.crew:report.sabotage);
+  const report=buildReport(game.records,game.players),p=report.byPlayer[reportPage-1],summary=p||report.crew;
   const weak=summary.tables.filter(t=>t.seen>=2&&t.accuracy<70);
-  panel.innerHTML=`<section class="panel report-panel">${p?`<div class="report-person">${avatar(p,'report-avatar')}<div><h2>${escapeHTML(p.name)}</h2><p>${p.role==='CREW'?'Krew · sifir darab':'Penyamar · bukan gandaan'}</p></div></div>`:`<nav class="report-tabs"><button data-action="report-kind" data-kind="crew" aria-pressed="${reportKind==='crew'}">Sifir darab</button><button data-action="report-kind" data-kind="sabotage" aria-pressed="${reportKind==='sabotage'}">Bukan gandaan</button></nav>`}<div class="stats-grid"><div class="stat"><strong>${summary.accuracy===null?'—':summary.accuracy+'%'}</strong><span>Ketepatan</span></div><div class="stat"><strong>${summary.correct}/${summary.attempts}</strong><span>Betul / dilihat</span></div><div class="stat"><strong>${summary.avgSeconds===null?'—':summary.avgSeconds+'s'}</strong><span>Purata masa</span></div></div>${reportBars(summary.tables)}<p class="report-note">${weak.length?'Perlu ulang: '+weak.map(t=>t.table).join(', ')+'.':summary.tables.some(t=>t.seen>=2)?'Tiada sifir bawah 70% dalam sampel ini.':'Data masih sedikit untuk mengenal pasti sifir lemah.'}</p><div class="report-footer"><button class="secondary" data-action="report-prev" aria-label="Halaman laporan sebelumnya" ${reportPage===0?'disabled':''}>‹</button><button class="secondary" data-action="report-next" aria-label="Halaman laporan seterusnya" ${reportPage===game.players.length?'disabled':''}>›</button><button class="primary" data-action="report-csv" aria-label="Eksport laporan CSV">CSV ↓</button><button class="secondary" data-action="game-over" aria-label="Tutup laporan">Tutup</button></div></section>`;
+  panel.innerHTML=`<section class="panel report-panel">${p?`<div class="report-person">${avatar(p,'report-avatar')}<div><h2>${escapeHTML(p.name)}</h2><p>${p.role==='CREW'?'Krew':'Penyamar'} · sifir darab</p></div></div>`:'<div class="report-heading"><h2>Prestasi sifir pasukan</h2><p>Semua pemain</p></div>'}<div class="stats-grid"><div class="stat"><strong>${summary.accuracy===null?'—':summary.accuracy+'%'}</strong><span>Ketepatan</span></div><div class="stat"><strong>${summary.correct}/${summary.attempts}</strong><span>Betul / dilihat</span></div><div class="stat"><strong>${summary.avgSeconds===null?'—':summary.avgSeconds+'s'}</strong><span>Purata masa</span></div></div>${reportBars(summary.tables)}<p class="report-note">${weak.length?'Perlu ulang: '+weak.map(t=>t.table).join(', ')+'.':summary.tables.some(t=>t.seen>=2)?'Tiada sifir bawah 70% dalam sampel ini.':'Data masih sedikit untuk mengenal pasti sifir lemah.'}</p><div class="report-footer"><button class="secondary" data-action="report-prev" aria-label="Halaman laporan sebelumnya" ${reportPage===0?'disabled':''}>‹</button><button class="secondary" data-action="report-next" aria-label="Halaman laporan seterusnya" ${reportPage===game.players.length?'disabled':''}>›</button><button class="primary" data-action="report-csv" aria-label="Eksport laporan CSV">CSV ↓</button><button class="secondary" data-action="game-over" aria-label="Tutup laporan">Tutup</button></div></section>`;
 }
 function startGame(){const err=validateConfig(names,tables);if(err)return;persist();game=newGame(names,tables,Math.random,settings);roleIndex=0;renderRole();}
 
@@ -270,7 +271,6 @@ panel.addEventListener('click',e=>{
     case 'report':reportPage=0;reportTablePage=0;renderReport();break;
     case 'report-prev':reportPage=Math.max(0,reportPage-1);reportTablePage=0;renderReport();break;
     case 'report-next':reportPage=Math.min(game.players.length,reportPage+1);reportTablePage=0;renderReport();break;
-    case 'report-kind':reportKind=b.dataset.kind;reportTablePage=0;renderReport();break;
     case 'report-tables-prev':reportTablePage=Math.max(0,reportTablePage-1);renderReport();break;
     case 'report-tables-next':reportTablePage++;renderReport();break;
     case 'report-csv':if(game?.winner)downloadCsv(game.records);break;
@@ -300,6 +300,7 @@ stageShell.addEventListener('click',e=>{
   if(action==='save'){savePlayerName();return;}
   if(action==='remove'&&names.length>4&&editingPlayerId!==null){names.splice(editingPlayerId,1);lobbySheet=null;editingPlayerId=null;refreshLobby();return;}
   if(action==='table'){const n=Number(b.dataset.table);tables=tables.includes(n)?tables.filter(t=>t!==n):[...tables,n].sort((a,b)=>a-b);refreshLobby();return;}
+  if(action==='anu'){settings=normalizeSettings({...settings,anu:!settings.anu});refreshLobby();return;}
   if(action==='preset'){tables=b.dataset.preset==='basic'?[2,5,10]:b.dataset.preset==='hard'?[6,7,8,9]:Array.from({length:12},(_,i)=>i+1);refreshLobby();}
 });
 stageShell.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='stage-player-name'){e.preventDefault();savePlayerName();}});

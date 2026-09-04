@@ -24,6 +24,7 @@ button,select,input{touch-action:manipulation}
 .station-tables{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
 .station-tables button{min-height:43px;padding:3px;font-size:19px;font-weight:800;background:#25364b}
 .station-tables button[aria-pressed="true"]{border-color:var(--amber);background:var(--amber);color:#172237;box-shadow:0 3px 0 #9b6730}
+.station-tables .anu-toggle{grid-column:1/-1;min-height:38px;font-size:14px;letter-spacing:.3px}
 .station-sheet-note{min-height:18px;margin-top:8px;color:#d5dfeb;font-size:13px;text-align:center}
 .player-edit-head{align-items:center}
 .player-edit-head .avatar-small{width:54px;height:60px}
@@ -94,6 +95,7 @@ select:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .report-tabs button{min-height:42px;padding:8px;font-size:15px}
 .report-tabs [aria-pressed="true"]{background:#284254;border-color:var(--mint);color:#d7fff3}
 .report-person{display:flex;align-items:center;gap:12px;flex:none}
+.report-heading{flex:none}.report-heading h2{font-size:24px}.report-heading p{font-size:13px;color:var(--muted)}
 .report-person h2{overflow-wrap:anywhere;font-size:25px}
 .report-person p{font-size:14px}
 .report-avatar{height:70px;width:63px;object-fit:contain;flex:none}
@@ -210,6 +212,7 @@ body.editing-name .settings-panel .setting-row,body.editing-name .settings-panel
   .station-sheet-head{margin-bottom:6px}
   .station-tables{gap:5px}
   .station-tables button{min-height:34px;font-size:17px}
+  .station-tables .anu-toggle{min-height:30px;font-size:12px}
   .station-presets{margin-bottom:6px}
   .station-presets button{min-height:30px}
 }
