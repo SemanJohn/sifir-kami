@@ -2,7 +2,7 @@
 
 Permainan web 2D berbahasa Melayu untuk 4–8 pemain sekolah rendah. Satu peranti diserahkan bergilir. Klasik mempunyai seorang penyamar; mod Misi+ mempunyai dua penyamar apabila ada 7–8 pemain.
 
-Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/).
+Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v1.3.0**.
 
 ## Cuba dan main
 
