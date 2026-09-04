@@ -12,6 +12,11 @@ export function normalizeSettings(value={}) {
   return out;
 }
 export function impostorCount(count,mode){return mode==='plus'&&count>=7?2:1;}
+export function toggleTable(tables,value){
+  const table=Number(value),current=[...new Set(tables.filter(Number.isInteger))];
+  if(!Number.isInteger(table)||table<1||table>12)return current.sort((a,b)=>a-b);
+  return (current.includes(table)?current.filter(n=>n!==table):[...current,table]).sort((a,b)=>a-b);
+}
 const ROSTERS='sifir-kami-class-rosters';
 export function loadRosters(){
   try{return JSON.parse(localStorage.getItem(ROSTERS)||'[]').filter(r=>typeof r.name==='string'&&Array.isArray(r.names)&&r.names.length>=4&&r.names.length<=8&&r.names.every(n=>typeof n==='string')).slice(0,12);}catch{return [];}

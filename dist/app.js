@@ -1,7 +1,7 @@
 import {COLORS,DEFAULT_NAMES,validateConfig,newGame,livePlayers,crewQuestion,anuQuestion,recordTurn,settleRound,voteResult,nextRound,shuffled,voteCandidates,canVoteFor,castVote,safeRound,crisisActive,checkTaskAnswer} from './game.js';
-import {createAnswerInput,deviceClass} from './input.js';
+import {createAnswerInput,createActionGuard,deviceClass} from './input.js';
 import {avatarURLs,startStation} from './scene.js';
-import {normalizeSettings,impostorCount,loadRosters,saveRoster} from './settings.js';
+import {normalizeSettings,impostorCount,toggleTable,loadRosters,saveRoster} from './settings.js';
 import {tableStatsFor,buildReport,downloadCsv} from './learning.js';
 
 const $=s=>document.querySelector(s);
@@ -14,6 +14,7 @@ try {settings=normalizeSettings(JSON.parse(localStorage.getItem('sifir-kami-sett
 let game=null,screen='LOBBY',roleIndex=0,turnIndex=0,turnOrder=[],voterIndex=0,voterOrder=[],selectedVote=null,hasSeenRole=false,holding=false,task=null,clock=null,epoch=0,meetingDeadline=0,lastVoteResult=null,soundOn=false,audioCtx=null,station=null;
 let helpPage=0,questionId=0,lobbySheet=null,editingPlayerId=null;
 const answerInput=createAnswerInput();
+const lobbyToggleGuard=createActionGuard();
 const app=$('#app');
 app.innerHTML=`<div class="page-intro"><h1 id="page-title">Sifir Kami</h1><span id="page-badge" class="outline-badge">Misi baharu</span></div><div id="layout" class="layout"><div id="visual-column"><div class="station-panel"><div class="station-toolbar"><span id="station-title">STESEN KAMI</span><span id="station-meta" class="muted">LOBI</span></div><div id="stage-shell"><div id="stage" role="img" aria-label="Stesen angkasa dengan watak krew comel"></div><div id="lobby-hud" hidden></div><section id="lobby-sheet" hidden aria-live="polite"></section></div></div></div><div id="mission-panel"></div></div>`;
 const panel=$('#mission-panel');
@@ -294,12 +295,13 @@ panel.addEventListener('click',e=>{
 
 stageShell.addEventListener('click',e=>{
   const b=e.target.closest('[data-lobby-action]');if(!b||b.disabled||screen!=='LOBBY')return;const action=b.dataset.lobbyAction;sound();
+  if((action==='table'||action==='anu')&&!lobbyToggleGuard.accept(action==='table'?`table:${b.dataset.table}`:'anu'))return;
   if(action==='add'&&names.length<8){let n=names.length+1,name=`Krew ${n}`;while(names.some(x=>x.toLocaleLowerCase('ms-MY')===name.toLocaleLowerCase('ms-MY')))name=`Krew ${++n}`;names.push(name);refreshLobby();openPlayerEditor(names.length-1);return;}
   if(action==='tables'){lobbySheet=lobbySheet==='tables'?null:'tables';editingPlayerId=null;renderLobbyControls();return;}
   if(action==='close'){lobbySheet=null;editingPlayerId=null;renderLobbyControls();return;}
   if(action==='save'){savePlayerName();return;}
   if(action==='remove'&&names.length>4&&editingPlayerId!==null){names.splice(editingPlayerId,1);lobbySheet=null;editingPlayerId=null;refreshLobby();return;}
-  if(action==='table'){const n=Number(b.dataset.table);tables=tables.includes(n)?tables.filter(t=>t!==n):[...tables,n].sort((a,b)=>a-b);refreshLobby();return;}
+  if(action==='table'){tables=toggleTable(tables,b.dataset.table);refreshLobby();return;}
   if(action==='anu'){settings=normalizeSettings({...settings,anu:!settings.anu});refreshLobby();return;}
   if(action==='preset'){tables=b.dataset.preset==='basic'?[2,5,10]:b.dataset.preset==='hard'?[6,7,8,9]:Array.from({length:12},(_,i)=>i+1);refreshLobby();}
 });

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {newGame,crewQuestion,anuQuestion,checkTaskAnswer,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,voteCandidates,canVoteFor,castVote} from '../dist/game.js';
-import {createAnswerInput,deviceClass} from '../dist/input.js';
+import {createAnswerInput,createActionGuard,deviceClass} from '../dist/input.js';
+import {toggleTable} from '../dist/settings.js';
 const names=n=>Array.from({length:n},(_,i)=>`Pemain ${i+1}`);
 const make=(n=4)=>newGame(names(n),[1,2,3,4],()=>0);
 const play=(g,correct=3,success=true)=>{for(const p of livePlayers(g))recordTurn(g,p.id,p.role==='CREW'?{correct,answered:3}:{success,table:2,intruder:3});settleRound(g);};
@@ -18,6 +19,11 @@ test('ANU hides either factor while preserving the multiplication fact',()=>{
   assert.equal(left.missing,'table');assert.equal(left.answer,7);assert.equal(left.product,base.answer);assert.ok(checkTaskAnswer(left,7));
   assert.equal(right.missing,'multiplier');assert.equal(right.answer,base.multiplier);assert.equal(right.product,base.answer);assert.ok(checkTaskAnswer(right,base.multiplier));
   assert.throws(()=>anuQuestion({table:7}));
+});
+test('default tables 2 through 5 can each be unticked',()=>{
+  let tables=[2,3,4,5];
+  for(const table of [2,3,4,5]){tables=toggleTable(tables,table);assert.equal(tables.includes(table),false);}
+  assert.deepEqual(tables,[]);assert.deepEqual(toggleTable([],5),[5]);
 });
 test('configuration rejects invalid rosters and fewer than two tables',()=>{
   assert.ok(validateConfig(names(3),[2,3]));assert.ok(validateConfig(names(9),[2,3]));assert.ok(validateConfig(['Ali','ali','B','C'],[2,3]));assert.ok(validateConfig(names(4),[1]));assert.equal(validateConfig(names(8),[1,2]),'');
@@ -102,6 +108,13 @@ test('cancelled, mismatched and repeated pointer releases never submit an answer
   input.press(3,'24',1);input.cancel();assert.equal(input.release(3,'24',1),false);
   input.press(3,'24',1);assert.equal(input.release(3,'24',1),true);
   assert.equal(input.release(3,'24',1),false);
+});
+test('duplicate mobile clicks cannot immediately reverse a lobby toggle',()=>{
+  const guard=createActionGuard(400);
+  assert.equal(guard.accept('table:2',1000),true);
+  assert.equal(guard.accept('table:2',1100),false);
+  assert.equal(guard.accept('table:3',1150),true);
+  assert.equal(guard.accept('table:2',1500),true);
 });
 
 test('device layout follows viewport and pointer type rather than user agent',()=>{
