@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {newGame,crewQuestion,impostorQuestion,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,voteCandidates,canVoteFor,castVote} from '../dist/game.js';
-import {createAnswerInput} from '../dist/input.js';
+import {createAnswerInput,deviceClass} from '../dist/input.js';
 const names=n=>Array.from({length:n},(_,i)=>`Pemain ${i+1}`);
 const make=(n=4)=>newGame(names(n),[1,2,3,4],()=>0);
 const play=(g,correct=3,success=true)=>{for(const p of livePlayers(g))recordTurn(g,p.id,p.role==='CREW'?{correct,answered:3}:{success,table:2,intruder:3});settleRound(g);};
@@ -101,4 +101,11 @@ test('cancelled, mismatched and repeated pointer releases never submit an answer
   input.press(3,'24',1);input.cancel();assert.equal(input.release(3,'24',1),false);
   input.press(3,'24',1);assert.equal(input.release(3,'24',1),true);
   assert.equal(input.release(3,'24',1),false);
+});
+
+test('device layout follows viewport and pointer type rather than user agent',()=>{
+  assert.equal(deviceClass(390,true),'phone');
+  assert.equal(deviceClass(820,true),'tablet');
+  assert.equal(deviceClass(1280,true),'desktop');
+  assert.equal(deviceClass(390,false),'desktop');
 });

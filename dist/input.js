@@ -12,3 +12,11 @@ export function createAnswerInput() {
     cancel() {press=null;}
   };
 }
+
+// Classify by usable viewport and input type; avoids brittle user-agent checks.
+export function deviceClass(width,coarsePointer=false) {
+  const w=Number(width);
+  if(coarsePointer&&w<600)return 'phone';
+  if(coarsePointer&&w<1100)return 'tablet';
+  return 'desktop';
+}

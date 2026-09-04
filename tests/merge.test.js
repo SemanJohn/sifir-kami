@@ -53,6 +53,13 @@ test('task screen requires typed answers and offers immediate turn completion',(
   assert.match(draw,/q\.mode='keypad'/);assert.match(draw,/class="keypad"/);assert.doesNotMatch(draw,/class="answer-grid"/);
   assert.match(source,/data-action="task-finish">Tamat giliran/);
 });
+test('lobby controls live over the responsive station canvas',()=>{
+  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+  const scene=readFileSync(new URL('../dist/scene.js',import.meta.url),'utf8');
+  const lobby=app.slice(app.indexOf('function renderLobby'),app.indexOf('function dots'));
+  assert.match(lobby,/lobby-hud/);assert.match(lobby,/stage-player-name/);assert.match(lobby,/station-tables/);
+  assert.doesNotMatch(lobby,/player-grid|setup-tabs/);assert.match(scene,/Phaser\.Scale\.RESIZE/);assert.match(scene,/setPlayerHandler/);
+});
 test('Misi+ parity and configured final-round survival both end the game',()=>{
   const parity=make(7);parity.round=2;parity.players.filter(p=>p.role==='CREW').slice(0,3).forEach(p=>p.alive=false);skip(parity);assert.equal(parity.winner,'IMPOSTOR');
   const last=make(8,{maxRounds:5});last.round=5;skip(last);assert.equal(last.winner,'IMPOSTOR');assert.match(last.reason,/5/);

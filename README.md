@@ -6,13 +6,21 @@ Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/).
 
 ## Cuba dan main
 
-1. Isi 4–8 nama berbeza pada langkah **Krew**, kemudian pilih sekurang-kurangnya dua sifir (1–12) pada langkah **Sifir** dan tekan **Mula misi**. Nama dipaparkan empat pada satu halaman.
+1. Lobi ialah skrin kapal interaktif. Tekan **＋** untuk menambah pemain; tekan mana-mana watak untuk mengubah nama atau membuangnya. Tekan **Sifir** dalam animasi dan pilih sekurang-kurangnya dua sifir (1–12), kemudian tekan **Mula misi** di bawah kapal.
 2. Ikut nama pada skrin. Tekan dan tahan untuk melihat peranan; lepaskan untuk menutupnya.
 3. Setiap pemain menjawab tiga tugasan dengan menaip sendiri pada papan nombor. Krew mengira sifir; penyamar menaip nombor yang bukan gandaan. Selepas soalan ketiga, tekan **Tamat giliran** tanpa perlu menunggu baki masa.
 4. Bateri dan petunjuk tanpa nama dipaparkan selepas semua giliran. Bincang sehingga 90 saat, kemudian undi seorang demi seorang. Pemain hanya boleh memilih pemain aktif yang lain; undi diri sendiri tidak dibenarkan.
 5. Undi seri atau undi “Langkau” tertinggi menyebabkan tiada penyingkiran. Pemain yang disingkirkan menjadi pemerhati.
 
 Krew menang jika bateri mencapai 100% atau semua penyamar disingkirkan. Penyamar menang apabila bateri mencapai 0% atau kekal aktif selepas undian terakhir. Keputusan bateri didahulukan sebelum mesyuarat. Lalai 3 pusingan; guru boleh memilih 2–6.
+
+## Lobi interaktif v1.2.0
+
+- Animasi kapal memenuhi ruang utama lobi; borang pemain yang berasingan dibuang.
+- Watak ialah kawalan pemain: tekan watak untuk mengubah nama atau membuang pemain, dan gunakan butang ＋ untuk menambah sehingga 8 pemain.
+- Pemilihan sifir dan pratetap Asas/Sukar/Semua berada dalam panel di atas animasi.
+- Hanya butang **Mula misi** berada di bawah animasi.
+- Saiz pentas, susunan watak dan kawalan menyesuaikan diri mengikut ruang skrin, orientasi dan jenis input telefon, tablet atau komputer.
 
 ## Gabungan v1.1.1
 

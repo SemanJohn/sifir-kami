@@ -31,33 +31,44 @@ export function startStation(parent,onReady) {
   const systemReduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   let reduced=systemReduced;
   class Station extends Phaser.Scene {
-    constructor(){super('station');this.roster=[];this.actors=[];this.ready=false;}
+    constructor(){super('station');this.roster=[];this.actors=[];this.ready=false;this.playerHandler=null;}
     preload(){this.load.image('station','./assets/station.png');}
     create(){
-      this.add.image(480,320,'station').setDisplaySize(960,640);
+      this.background=this.add.image(0,0,'station').setOrigin(.5).setDepth(-10);
+      this.vignette=this.add.graphics().setDepth(-5);
       avatars.forEach((canvas,i)=>this.textures.addCanvas('buddy'+i,canvas));
-      this.ready=true;this.setRoster(this.roster);
+      this.ready=true;this.layoutScene();this.setRoster(this.roster);
       this.input.on('pointerdown',pointer=>{
         if(!this.actors.length)return;
         const a=this.actors[Math.floor(Math.random()*this.actors.length)];
         if(reduced)return;
-        this.tweens.add({targets:a.container,x:Phaser.Math.Clamp(pointer.x,170,790),y:Phaser.Math.Clamp(pointer.y,350,520),duration:850,ease:'Sine.inOut'});
+        const {width,height}=this.scale.gameSize;
+        this.tweens.add({targets:a.container,x:Phaser.Math.Clamp(pointer.x,width*.12,width*.88),y:Phaser.Math.Clamp(pointer.y,height*.45,height*.82),duration:700,ease:'Sine.inOut'});
         const dot=this.add.circle(pointer.x,pointer.y,15,0xa8e2d2,.4);this.tweens.add({targets:dot,scale:2,alpha:0,duration:600,onComplete:()=>dot.destroy()});
       });
+      this.scale.on('resize',()=>{this.layoutScene();this.setRoster(this.roster);});
       onReady?.(this);
     }
+    layoutScene(){
+      if(!this.background)return;const {width:w,height:h}=this.scale.gameSize,scale=Math.max(w/960,h/640);
+      this.background.setPosition(w/2,h/2).setDisplaySize(960*scale,640*scale);
+      this.vignette.clear().fillStyle(0x07101f,.2).fillRect(0,0,w,h).lineStyle(2,0x77d9cf,.22).strokeRoundedRect(10,10,Math.max(0,w-20),Math.max(0,h-20),20);
+    }
+    setPlayerHandler(handler){this.playerHandler=typeof handler==='function'?handler:null;}
     setMotion(value){const next=systemReduced||value;if(next===reduced)return;reduced=next;if(this.ready)this.setRoster(this.roster);}
     setRoster(players){
       this.roster=players;if(!this.ready)return;
       this.actors.forEach(a=>{this.tweens.killTweensOf([a.container,a.sprite]);a.container.destroy();});this.actors=[];
-      const n=players.length;
+      const {width:w,height:h}=this.scale.gameSize,n=players.length,cols=n<=4?2:n<=6?3:4,rows=Math.ceil(n/cols);
+      const areaW=Math.min(w*.76,760),left=(w-areaW)/2,rowGap=Math.min(h*.22,145),startY=h*(rows===1?.62:.54);
       players.forEach((p,i)=>{
-        const angle=(i/n)*Math.PI*2-.6;
-        const x=480+Math.cos(angle)*225,y=410+Math.sin(angle)*85;
-        const sprite=this.add.image(0,-44,'buddy'+p.id%8).setDisplaySize(112,125);
-        const label=this.add.text(0,28,p.name,{fontFamily:'Arial, sans-serif',fontSize:'16px',fontStyle:'bold',color:'#ffffff',backgroundColor:'#172334',padding:{x:10,y:5}}).setOrigin(.5);
+        const row=Math.floor(i/cols),items=Math.min(cols,n-row*cols),col=i-row*cols,x=left+areaW*(col+1)/(items+1),y=startY+row*rowGap;
+        const spriteW=Math.max(68,Math.min(118,w/(cols+1)*.72,h/(rows+2)*.72)),spriteH=spriteW*1.12;
+        const sprite=this.add.image(0,-spriteH*.34,'buddy'+p.id%8).setDisplaySize(spriteW,spriteH).setInteractive({useHandCursor:true});
+        const label=this.add.text(0,spriteH*.29,p.name,{fontFamily:'Arial, sans-serif',fontSize:`${Math.max(12,Math.min(17,w/32))}px`,fontStyle:'bold',color:'#ffffff',backgroundColor:'#172334dd',padding:{x:8,y:4}}).setOrigin(.5);
         const container=this.add.container(x,y,[sprite,label]);container.setAlpha(p.alive===false?.4:1);container.setDepth(y);
-        if(!reduced)this.tweens.add({targets:sprite,y:-51,duration:1000+100*i,yoyo:true,repeat:-1,ease:'Sine.inOut',delay:i*150});
+        sprite.on('pointerdown',(pointer,_x,_y,event)=>{event?.stopPropagation();this.playerHandler?.(p.id);if(!reduced)this.tweens.add({targets:sprite,scaleX:1.08,scaleY:1.08,duration:90,yoyo:true});});
+        if(!reduced)this.tweens.add({targets:sprite,y:sprite.y-7,duration:1000+100*i,yoyo:true,repeat:-1,ease:'Sine.inOut',delay:i*150});
         this.actors.push({container,sprite,label});
       });
     }
@@ -67,6 +78,6 @@ export function startStation(parent,onReady) {
     }
   }
   const scene=new Station();
-  const game=new Phaser.Game({type:Phaser.AUTO,parent,width:960,height:640,backgroundColor:'#101827',scene,scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true},audio:{noAudio:true},banner:false});
+  const game=new Phaser.Game({type:Phaser.AUTO,parent,width:parent.clientWidth||960,height:parent.clientHeight||640,backgroundColor:'#101827',scene,scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true},audio:{noAudio:true},banner:false});
   return {game,scene};
 }

@@ -4,6 +4,48 @@ body{background:radial-gradient(ellipse at 12% 0%,#18375970,transparent 55%),rad
 .panel{background:linear-gradient(160deg,#1c2b43,var(--panel) 65%)}
 .primary{background:linear-gradient(160deg,#ffd18b,var(--amber));box-shadow:0 4px 16px #ffbf6910}
 button,select,input{touch-action:manipulation}
+.icon-button{border-radius:11px;background:#172338;border-color:#31435b;box-shadow:none}
+#stage-shell{position:relative;display:flex;flex:1;min-height:0;overflow:hidden;background:#101827}
+#stage{position:absolute;inset:0;width:100%;height:100%}
+#lobby-hud{position:absolute;inset:12px 12px auto;z-index:4;pointer-events:none;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+#lobby-hud[hidden]{display:none!important}
+.lobby-hud-actions{display:flex;gap:8px;pointer-events:auto}
+.lobby-hud-actions button{min-height:42px;display:flex;align-items:center;gap:7px;padding:7px 12px;border-color:#7894aa;background:#101d2ee8;box-shadow:0 5px 18px #02071270;font-size:14px;font-weight:700}
+.lobby-hud-actions button b{display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:var(--amber);color:#172237;font-size:21px;line-height:1}
+.lobby-hud-actions button i{display:grid;place-items:center;min-width:24px;height:24px;padding:0 5px;border-radius:12px;background:var(--mint);color:#10243a;font-size:12px;font-style:normal}
+#lobby-hud>p{max-width:245px;padding:8px 11px;border-radius:10px;background:#0a1423d9;color:#e6eef7;font-size:13px;line-height:1.25;text-align:right;box-shadow:0 5px 18px #02071270}
+#lobby-sheet{position:absolute;z-index:6;left:50%;bottom:12px;transform:translateX(-50%);width:min(520px,calc(100% - 24px));max-height:calc(100% - 76px);padding:16px;border:1px solid #668298;border-radius:18px;background:linear-gradient(160deg,#17283ef7,#101c30f7);box-shadow:0 15px 44px #020610c9;overflow:hidden}
+.station-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.station-sheet-head>div>span,.player-edit-head label>span{display:block;color:var(--mint);font-size:12px;letter-spacing:.8px;text-transform:uppercase}
+.station-sheet-head h2{font-size:25px}
+.station-sheet-head>button{flex:none;width:38px;height:38px;padding:0;border-radius:50%;background:#273850;font-size:25px;line-height:1}
+.station-presets{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:9px}
+.station-presets button{min-height:35px;padding:5px;font-size:13px}
+.station-tables{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.station-tables button{min-height:43px;padding:3px;font-size:19px;font-weight:800;background:#25364b}
+.station-tables button[aria-pressed="true"]{border-color:var(--amber);background:var(--amber);color:#172237;box-shadow:0 3px 0 #9b6730}
+.station-sheet-note{min-height:18px;margin-top:8px;color:#d5dfeb;font-size:13px;text-align:center}
+.player-edit-head{align-items:center}
+.player-edit-head .avatar-small{width:54px;height:60px}
+.player-edit-head label{flex:1;min-width:0;text-align:left}
+.player-edit-head input{width:100%;min-height:45px;margin-top:3px;border:1px solid #668298;border-radius:10px;background:#0d1829;color:var(--ink);padding:7px 10px;font-size:18px}
+.player-edit-actions{display:grid;grid-template-columns:1fr 1.25fr;gap:8px;margin-top:10px}
+.player-edit-actions>*:only-child{grid-column:1/-1}
+.player-edit-actions button{min-height:44px;padding:7px 10px;font-weight:700}
+.danger-button{border-color:#a65863;background:#462b39;color:#ffd4da}
+.lobby-mode{display:flex;flex-direction:column;gap:9px}
+.lobby-mode #visual-column{display:flex;flex:1;min-height:0;width:100%}
+.lobby-mode .station-panel{height:100%;max-height:none;border-radius:18px;box-shadow:0 12px 35px #040a1570}
+.lobby-mode #mission-panel{flex:none;width:100%}
+.lobby-launch{display:flex;flex-direction:column;gap:5px;width:100%}
+.lobby-launch .primary{min-height:54px;border-radius:15px;font-family:'Baloo 2',system-ui,sans-serif;font-size:21px}
+.lobby-launch .error{text-align:center}
+body[data-screen="LOBBY"] .page-intro{display:none}
+body[data-screen="LOBBY"] #app{gap:0}
+html[data-device="tablet"] .lobby-mode .station-panel{max-width:900px;margin:auto}
+html[data-device="desktop"] .lobby-mode .station-panel{max-width:1120px;margin:auto}
+html[data-device="phone"] .lobby-hud-actions button{padding-inline:9px}
+html[data-orientation="landscape"] body[data-screen="LOBBY"] .lobby-launch{max-width:520px;margin:auto}
 select{min-width:0;max-width:100%;border:1px solid #495f7c;border-radius:10px;color:var(--ink);background:#152339;padding:8px;font:inherit;font-size:16px;min-height:42px}
 select:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .settings-content{display:flex;flex:1;min-height:0;flex-direction:column;justify-content:center;gap:12px}
@@ -81,6 +123,15 @@ select:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   .topbar .brand{font-size:22px}
   .top-actions{gap:5px}
   .winner-avatars .big-avatar{max-height:95px}
+  .lobby-mode #visual-column{display:flex;flex:1;min-height:0;max-height:none}
+  .lobby-mode .station-panel{border-radius:15px}
+  #lobby-hud{inset:9px 9px auto}
+  .lobby-hud-actions button{min-height:39px;padding:6px 9px}
+  .lobby-hud-actions button span{display:none}
+  #lobby-hud>p{font-size:12px;max-width:205px;padding:7px 9px}
+  #lobby-sheet{bottom:9px;width:calc(100% - 18px);padding:13px;border-radius:15px}
+  .station-tables button{min-height:40px}
+  .lobby-launch .primary{min-height:50px;font-size:20px}
 }
 @media(max-height:680px){
   .settings-content{gap:9px}
@@ -154,4 +205,11 @@ body.editing-name .settings-panel .setting-row,body.editing-name .settings-panel
   .keypad{height:168px}
   #typed-answer{min-height:36px;font-size:30px}
   .report-panel{gap:6px}
+  #lobby-hud>p{display:none}
+  #lobby-sheet{max-height:calc(100% - 58px);padding:10px}
+  .station-sheet-head{margin-bottom:6px}
+  .station-tables{gap:5px}
+  .station-tables button{min-height:34px;font-size:17px}
+  .station-presets{margin-bottom:6px}
+  .station-presets button{min-height:30px}
 }

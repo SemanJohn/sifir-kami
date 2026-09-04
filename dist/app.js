@@ -1,5 +1,5 @@
 import {COLORS,DEFAULT_NAMES,validateConfig,newGame,livePlayers,crewQuestion,impostorQuestion,recordTurn,settleRound,voteResult,nextRound,shuffled,voteCandidates,canVoteFor,castVote,safeRound,crisisActive,checkTaskAnswer} from './game.js';
-import {createAnswerInput} from './input.js';
+import {createAnswerInput,deviceClass} from './input.js';
 import {avatarURLs,startStation} from './scene.js';
 import {normalizeSettings,impostorCount,loadRosters,saveRoster} from './settings.js';
 import {tableStatsFor,buildReport,downloadCsv} from './learning.js';
@@ -12,18 +12,19 @@ let settings=normalizeSettings(),settingsPage=0,reportPage=0,reportKind='crew',r
 try {const saved=JSON.parse(localStorage.getItem('sifir-kami-config'));if(saved&&!validateConfig(saved.names,saved.tables)){names=saved.names;tables=saved.tables;}} catch {}
 try {settings=normalizeSettings(JSON.parse(localStorage.getItem('sifir-kami-settings')||'{}'));}catch{}
 let game=null,screen='LOBBY',roleIndex=0,turnIndex=0,turnOrder=[],voterIndex=0,voterOrder=[],selectedVote=null,hasSeenRole=false,holding=false,task=null,clock=null,epoch=0,meetingDeadline=0,lastVoteResult=null,soundOn=false,audioCtx=null,station=null;
-let lobbyStep=0,crewPage=0,helpPage=0,questionId=0;
+let helpPage=0,questionId=0,lobbySheet=null,editingPlayerId=null;
 const answerInput=createAnswerInput();
 const app=$('#app');
-app.innerHTML=`<div class="page-intro"><h1 id="page-title">Sifir Kami</h1><span id="page-badge" class="outline-badge">Misi baharu</span></div><div id="layout" class="layout"><div id="visual-column"><div class="station-panel"><div class="station-toolbar"><span>STESEN KAMI</span><span id="station-meta" class="muted">LOBI</span></div><div id="stage" role="img" aria-label="Stesen angkasa dengan watak krew comel"></div></div></div><div id="mission-panel"></div></div>`;
+app.innerHTML=`<div class="page-intro"><h1 id="page-title">Sifir Kami</h1><span id="page-badge" class="outline-badge">Misi baharu</span></div><div id="layout" class="layout"><div id="visual-column"><div class="station-panel"><div class="station-toolbar"><span id="station-title">STESEN KAMI</span><span id="station-meta" class="muted">LOBI</span></div><div id="stage-shell"><div id="stage" role="img" aria-label="Stesen angkasa dengan watak krew comel"></div><div id="lobby-hud" hidden></div><section id="lobby-sheet" hidden aria-live="polite"></section></div></div></div><div id="mission-panel"></div></div>`;
 const panel=$('#mission-panel');
+const stageShell=$('#stage-shell');
 
 function sound(){if(!soundOn)return;try{audioCtx??=new (window.AudioContext||window.webkitAudioContext)();audioCtx.resume();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.type='sine';o.frequency.setValueAtTime(620,audioCtx.currentTime);o.frequency.exponentialRampToValueAtTime(420,audioCtx.currentTime+.08);g.gain.setValueAtTime(.035,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.1);o.start();o.stop(audioCtx.currentTime+.11);}catch{}}
 function updateSound(){const b=$('#sound-button');b.setAttribute('aria-pressed',String(soundOn));b.setAttribute('aria-label',soundOn?'Matikan bunyi':'Hidupkan bunyi');b.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 5 6 9H3v6h3l5 4V5Z"/>${soundOn?'<path d="M15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/>':'<path d="m16 9 5 6m0-6-5 6"/>'}</svg>`;}
 $('#sound-button').addEventListener('click',()=>{soundOn=!soundOn;updateSound();sound();});updateSound();
 $('#settings-button').addEventListener('click',()=>{if(screen==='LOBBY'){settingsPage=0;renderSettings();}});
 const helpPages=[
-  ['Misi pasukan','<p><b>4–8 pemain · 1 peranti.</b> Lalai 3 pusingan; guru boleh memilih 2–6.</p><p>Tekan dan tahan untuk melihat peranan, kemudian serah peranti mengikut nama.</p><p><b>Krew menang:</b> bateri 100% atau semua penyamar disingkirkan.</p><p><b>Penyamar menang:</b> bateri 0% atau masih aktif selepas undian terakhir.</p>'],
+  ['Misi pasukan','<p><b>4–8 pemain · 1 peranti.</b> Tekan ＋ untuk menambah pemain dan tekan watak untuk ubah nama atau buang.</p><p>Pilih sifir dalam skrin kapal. Selepas misi bermula, tekan dan tahan untuk melihat peranan.</p><p><b>Krew menang:</b> bateri 100% atau semua penyamar disingkirkan.</p><p><b>Penyamar menang:</b> bateri 0% atau masih aktif selepas undian terakhir.</p>'],
   ['Tugasan rahsia','<p>Lalai <b>25 saat</b> setiap giliran. Masa boleh diubah atau dimatikan.</p><p>Semua pemain menjawab <b>3 tugasan</b> dengan menaip sendiri pada papan nombor.</p><p><b>Krew:</b> kira jawapan sifir. <b>Penyamar:</b> taip satu nombor yang bukan gandaan sifir sasaran.</p><p>Gunakan ⌫ untuk memadam dan ✓ untuk menghantar jawapan.</p>'],
   ['Bincang & undi','<p>Lalai <b>90 saat</b> untuk berbincang. Log tidak mendedahkan nama pelaku.</p><p>Setiap pemain aktif memilih pemain lain atau <b>Langkau</b>. Undi diri sendiri dilarang.</p><p>Undi seri atau Langkau terbanyak: tiada penyingkiran.</p><p>Pemain tersingkir menjadi pemerhati.</p>'],
   ['Mod Misi+','<p><b>7–8 pemain:</b> dua penyamar yang saling mengenali.</p><p><b>Pusingan 1 selamat:</b> undian hanya menanda syak, bukan menyingkir.</p><p><b>Krisis mulai pusingan 2:</b> sekurang-kurangnya satu kombo krew 3/3 memberi +6%. Jika tiada, bateri −8%.</p><p>Penyamar juga menang apabila bilangan mereka menyamai krew.</p>'],
@@ -49,6 +50,9 @@ function base(next,{privateView=false}={}){
   const scene=station?.scene;
   if(scene?.ready){if(privateView)scene.scene.pause();else{scene.scene.resume();syncRoster();}}
   $('#station-meta').textContent=game?`PUSINGAN ${game.round} / ${game.maxRounds}`:'LOBI · MENUNGGU KREW';
+  $('#station-title').textContent=next==='LOBBY'?'LOBI MISI':'STESEN KAMI';
+  $('#lobby-hud').hidden=next!=='LOBBY';$('#lobby-sheet').hidden=true;
+  station?.scene.setPlayerHandler(next==='LOBBY'?openPlayerEditor:null);
   $('.safety-curtain')?.remove();
   if(!privateView)requestAnimationFrame(()=>station?.game.scale.refresh());
 }
@@ -66,13 +70,37 @@ function renderSettings(){
   panel.innerHTML=`<section class="panel settings-panel"><div class="settings-content">${content}</div><p class="error" id="settings-message" role="status"></p><div class="page-controls"><button class="secondary" data-action="settings-prev" ${settingsPage===0?'disabled':''}>Kembali</button><button class="secondary" data-action="settings-next" ${settingsPage===2?'disabled':''}>Seterusnya</button></div><button class="primary" data-action="settings-done">Selesai · Kembali ke lobi</button></section>`;
 }
 function renderLobby(){
-  base('LOBBY');header('Sediakan misi','',`${settings.mode==='plus'?'Misi+':'Klasik'} · ${impostorCount(names.length,settings.mode)} penyamar`);
-  crewPage=Math.min(crewPage,Math.floor((names.length-1)/4));
-  const players=names.map((name,id)=>({name,id})).slice(crewPage*4,crewPage*4+4);
-  panel.innerHTML=`<section class="panel lobby-panel"><nav class="setup-tabs" aria-label="Tetapan misi"><button data-action="setup-step" data-step="0" aria-current="${lobbyStep===0?'step':'false'}">1 · Krew</button><button data-action="setup-step" data-step="1" aria-current="${lobbyStep===1?'step':'false'}">2 · Sifir</button></nav><div class="setup-content">${lobbyStep===0?`<div class="section-title"><h2>Siapa bermain?</h2><span class="counter">${names.length}/8</span></div><div class="player-grid">${players.map(({name,id})=>`<div class="player-field">${avatar({id},'avatar-small')}<input data-name="${id}" type="text" maxlength="20" value="${escapeHTML(name)}" aria-label="Nama pemain ${id+1}" autocomplete="off" spellcheck="false">${names.length>4?`<button class="remove-player" data-action="remove" data-id="${id}" aria-label="Buang pemain ${id+1}" type="button">×</button>`:''}</div>`).join('')}</div><div class="crew-controls">${names.length<8?'<button class="add-player" data-action="add">＋ Tambah krew</button>':'<span class="counter">Pasukan lengkap</span>'}${names.length>4?`<div class="pager"><button data-action="crew-prev" aria-label="Krew sebelum" ${crewPage===0?'disabled':''}>‹</button><span>${crewPage+1}/2</span><button data-action="crew-next" aria-label="Krew seterusnya" ${crewPage===1?'disabled':''}>›</button></div>`:''}</div>`:`<div class="section-title"><h2>Sifir misi</h2><span class="counter">${tables.length} dipilih</span></div><div class="presets"><button class="preset" data-action="preset" data-preset="basic">Asas</button><button class="preset" data-action="preset" data-preset="hard">Zon sukar</button><button class="preset" data-action="preset" data-preset="all">Semua</button></div><div class="tables">${Array.from({length:12},(_,i)=>i+1).map(n=>`<button class="table-toggle" data-action="table" data-table="${n}" aria-pressed="${tables.includes(n)}" aria-label="Sifir ${n}">${n}</button>`).join('')}</div><p class="hint">Pilih sekurang-kurangnya 2 sifir.</p>`}</div><div class="setup-actions"><p id="lobby-error" class="error" role="status"></p><button id="start-button" class="primary" data-action="${lobbyStep===0?'setup-next':'start'}">${lobbyStep===0?'Pilih sifir →':'Mula misi'}</button></div></section>`;
-  validateLobby();syncRoster();fitViewport();
+  lobbySheet=null;editingPlayerId=null;base('LOBBY');
+  panel.innerHTML='<div class="lobby-launch"><p id="lobby-error" class="error" role="status"></p><button id="start-button" class="primary" data-action="start">Mula misi</button></div>';
+  refreshLobby();fitViewport();
 }
-function validateLobby(){const error=validateConfig(names,lobbyStep===0?[2,3]:tables);$('#lobby-error').textContent=error;$('#start-button').disabled=!!error;}
+function refreshLobby(){
+  if(screen!=='LOBBY')return;
+  header('Sediakan misi','',`${settings.mode==='plus'?'Misi+':'Klasik'} · ${impostorCount(names.length,settings.mode)} penyamar`);
+  $('#station-title').textContent=`${settings.mode==='plus'?'MISI+':'KLASIK'} · ${impostorCount(names.length,settings.mode)} PENYAMAR`;
+  $('#station-meta').textContent=`${names.length}/8 PEMAIN · ${tables.length} SIFIR`;
+  renderLobbyControls();validateLobby();syncRoster();persist();
+  station?.scene.setPlayerHandler(openPlayerEditor);
+}
+function renderLobbyControls(){
+  const hud=$('#lobby-hud');hud.hidden=false;
+  hud.innerHTML=`<div class="lobby-hud-actions"><button data-lobby-action="add" ${names.length>=8?'disabled':''} aria-label="Tambah pemain"><b>＋</b><span>Tambah pemain</span></button><button data-lobby-action="tables" aria-expanded="${lobbySheet==='tables'}"><b>×</b><span>Sifir</span><i>${tables.length}</i></button></div><p>${names.length<8?'Tekan watak untuk ubah nama atau buang':'Pasukan lengkap · tekan watak untuk ubah nama'}</p>`;
+  const sheet=$('#lobby-sheet');
+  if(lobbySheet==='tables'){
+    sheet.hidden=false;sheet.innerHTML=`<div class="station-sheet-head"><div><span>Tetapan misi</span><h2>Pilih sifir</h2></div><button data-lobby-action="close" aria-label="Tutup pilihan sifir">×</button></div><div class="station-presets"><button data-lobby-action="preset" data-preset="basic">Asas</button><button data-lobby-action="preset" data-preset="hard">Sukar</button><button data-lobby-action="preset" data-preset="all">Semua</button></div><div class="station-tables">${Array.from({length:12},(_,i)=>i+1).map(n=>`<button data-lobby-action="table" data-table="${n}" aria-pressed="${tables.includes(n)}" aria-label="Sifir ${n}">${n}</button>`).join('')}</div><p class="station-sheet-note">${tables.length<2?'Pilih sekurang-kurangnya 2 sifir.':`${tables.length} sifir dipilih.`}</p>`;
+  }else if(lobbySheet==='player'&&Number.isInteger(editingPlayerId)&&names[editingPlayerId]!==undefined){
+    const id=editingPlayerId;sheet.hidden=false;sheet.innerHTML=`<div class="station-sheet-head player-edit-head">${avatar({id},'avatar-small')}<label><span>Nama pemain</span><input id="stage-player-name" maxlength="20" value="${escapeHTML(names[id])}" autocomplete="off" spellcheck="false"></label><button data-lobby-action="close" aria-label="Tutup suntingan nama">×</button></div><p id="stage-player-error" class="error" role="status"></p><div class="player-edit-actions">${names.length>4?'<button class="danger-button" data-lobby-action="remove">− Buang pemain</button>':''}<button class="primary" data-lobby-action="save">Simpan nama</button></div>`;
+  }else sheet.hidden=true;
+}
+function validateLobby(){const error=validateConfig(names,tables);$('#lobby-error').textContent=error;$('#start-button').disabled=!!error;}
+function openPlayerEditor(id){if(screen!=='LOBBY'||!Number.isInteger(Number(id))||!names[Number(id)])return;editingPlayerId=Number(id);lobbySheet='player';renderLobbyControls();requestAnimationFrame(()=>{$('#stage-player-name')?.focus();$('#stage-player-name')?.select();});}
+function savePlayerName(){
+  const input=$('#stage-player-name'),message=$('#stage-player-error');if(!input||editingPlayerId===null)return;
+  const value=input.value.trim();let error='';
+  if(!value)error='Nama pemain tidak boleh kosong.';else if(names.some((n,i)=>i!==editingPlayerId&&n.trim().toLocaleLowerCase('ms-MY')===value.toLocaleLowerCase('ms-MY')))error='Gunakan nama yang berbeza.';
+  if(error){message.textContent=error;return;}
+  names[editingPlayerId]=value;lobbySheet=null;editingPlayerId=null;refreshLobby();
+}
 function dots(current,total){return `<div class="progress-dots" aria-label="${current} daripada ${total}">${Array.from({length:total},(_,i)=>`<span class="progress-dot ${i<current?'done':''}"></span>`).join('')}</div>`;}
 function renderRole(){
   base('ROLE',{privateView:true});hasSeenRole=false;const p=game.players[roleIndex];
@@ -195,7 +223,6 @@ function renderReport(){
 }
 function startGame(){const err=validateConfig(names,tables);if(err)return;persist();game=newGame(names,tables,Math.random,settings);roleIndex=0;renderRole();}
 
-panel.addEventListener('input',e=>{if(e.target.matches('[data-name]')){names[Number(e.target.dataset.name)]=e.target.value;validateLobby();syncRoster();}});
 panel.addEventListener('change',e=>{
   if(!e.target.matches('[data-setting]')||screen!=='SETTINGS')return;
   const key=e.target.dataset.setting;settings=normalizeSettings({...settings,[key]:e.target.type==='checkbox'?e.target.checked:Number(e.target.value)});applySettings();persist();
@@ -239,7 +266,7 @@ panel.addEventListener('click',e=>{
     case 'settings-next':settingsPage=Math.min(2,settingsPage+1);renderSettings();break;
     case 'settings-done':persist();applySettings();renderLobby();break;
     case 'roster-save':try{const error=validateConfig(names,[2,3]);if(error)throw Error(error);saveRoster($('#roster-name').value,names);renderSettings();$('#settings-message').textContent='Kumpulan disimpan pada peranti ini.';}catch(err){$('#settings-message').textContent=err.message;}break;
-    case 'roster-load':{const value=$('#roster-select').value,r=loadRosters()[Number(value)];if(value!==''&&r){names=[...r.names];persist();crewPage=0;renderLobby();}break;}
+    case 'roster-load':{const value=$('#roster-select').value,r=loadRosters()[Number(value)];if(value!==''&&r){names=[...r.names];persist();renderLobby();}break;}
     case 'report':reportPage=0;reportTablePage=0;renderReport();break;
     case 'report-prev':reportPage=Math.max(0,reportPage-1);reportTablePage=0;renderReport();break;
     case 'report-next':reportPage=Math.min(game.players.length,reportPage+1);reportTablePage=0;renderReport();break;
@@ -247,14 +274,6 @@ panel.addEventListener('click',e=>{
     case 'report-tables-prev':reportTablePage=Math.max(0,reportTablePage-1);renderReport();break;
     case 'report-tables-next':reportTablePage++;renderReport();break;
     case 'report-csv':if(game?.winner)downloadCsv(game.records);break;
-    case 'setup-step':lobbyStep=Number(b.dataset.step);renderLobby();break;
-    case 'setup-next':lobbyStep=1;renderLobby();break;
-    case 'crew-prev':crewPage=0;renderLobby();break;
-    case 'crew-next':crewPage=1;renderLobby();break;
-    case 'add':if(names.length<8){names.push(`Krew ${names.length+1}`);crewPage=Math.floor((names.length-1)/4);renderLobby();}break;
-    case 'remove':if(names.length>4){names.splice(Number(b.dataset.id),1);renderLobby();}break;
-    case 'table':{const n=Number(b.dataset.table);tables=tables.includes(n)?tables.filter(t=>t!==n):[...tables,n].sort((a,b)=>a-b);renderLobby();break;}
-    case 'preset':tables=b.dataset.preset==='basic'?[2,5,10]:b.dataset.preset==='hard'?[6,7,8,9]:Array.from({length:12},(_,i)=>i+1);renderLobby();break;
     case 'start':startGame();break;
     case 'role-next':if(!hasSeenRole||holding)return;roleIndex++;if(roleIndex<game.players.length)renderRole();else beginRound();break;
     case 'task-start':startTask();break;
@@ -269,9 +288,21 @@ panel.addEventListener('click',e=>{
     case 'round-next':nextRound(game);beginRound();break;
     case 'game-over':renderGameOver();break;
     case 'replay':startGame();break;
-    case 'lobby':game=null;lobbyStep=0;crewPage=0;renderLobby();break;
+    case 'lobby':game=null;renderLobby();break;
   }
 });
+
+stageShell.addEventListener('click',e=>{
+  const b=e.target.closest('[data-lobby-action]');if(!b||b.disabled||screen!=='LOBBY')return;const action=b.dataset.lobbyAction;sound();
+  if(action==='add'&&names.length<8){let n=names.length+1,name=`Krew ${n}`;while(names.some(x=>x.toLocaleLowerCase('ms-MY')===name.toLocaleLowerCase('ms-MY')))name=`Krew ${++n}`;names.push(name);refreshLobby();openPlayerEditor(names.length-1);return;}
+  if(action==='tables'){lobbySheet=lobbySheet==='tables'?null:'tables';editingPlayerId=null;renderLobbyControls();return;}
+  if(action==='close'){lobbySheet=null;editingPlayerId=null;renderLobbyControls();return;}
+  if(action==='save'){savePlayerName();return;}
+  if(action==='remove'&&names.length>4&&editingPlayerId!==null){names.splice(editingPlayerId,1);lobbySheet=null;editingPlayerId=null;refreshLobby();return;}
+  if(action==='table'){const n=Number(b.dataset.table);tables=tables.includes(n)?tables.filter(t=>t!==n):[...tables,n].sort((a,b)=>a-b);refreshLobby();return;}
+  if(action==='preset'){tables=b.dataset.preset==='basic'?[2,5,10]:b.dataset.preset==='hard'?[6,7,8,9]:Array.from({length:12},(_,i)=>i+1);refreshLobby();}
+});
+stageShell.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='stage-player-name'){e.preventDefault();savePlayerName();}});
 
 function curtain(){
   hideRole();answerInput.cancel();clearPressed();
@@ -286,12 +317,16 @@ window.addEventListener('beforeunload',e=>{if(game&&screen!=='GAME_OVER'){e.prev
 
 function fitViewport(){
   const height=window.visualViewport?.height??window.innerHeight;
+  const width=window.visualViewport?.width??window.innerWidth,coarse=matchMedia('(pointer:coarse)').matches;
   document.documentElement.style.setProperty('--app-height',`${Math.round(height)}px`);
+  document.documentElement.dataset.device=deviceClass(width,coarse);
+  document.documentElement.dataset.orientation=width>height?'landscape':'portrait';
   document.body.classList.toggle('editing-name',document.activeElement?.matches('[data-name],#roster-name')??false);
+  requestAnimationFrame(()=>station?.game.scale.refresh());
 }
 window.addEventListener('resize',fitViewport);window.visualViewport?.addEventListener('resize',fitViewport);
 document.addEventListener('focusin',fitViewport);document.addEventListener('focusout',()=>requestAnimationFrame(fitViewport));
-applySettings();fitViewport();renderLobby();station=startStation($('#stage'),s=>{s.setMotion(settings.reduceMotion);s.setRoster(roster());if($('#layout').classList.contains('private-mode'))s.scene.pause();});
+applySettings();fitViewport();renderLobby();station=startStation($('#stage'),s=>{s.setMotion(settings.reduceMotion);s.setRoster(roster());s.setPlayerHandler(openPlayerEditor);if($('#layout').classList.contains('private-mode'))s.scene.pause();});
 if('serviceWorker' in navigator){
   let refreshing=false;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!refreshing&&screen==='LOBBY'){refreshing=true;location.reload();}});
