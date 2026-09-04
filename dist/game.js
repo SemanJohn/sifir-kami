@@ -10,7 +10,7 @@ export function shuffled(items, rng = Math.random) {
 }
 export function randomItem(items, rng = Math.random) { return items[Math.floor(rng()*items.length)]; }
 export function validateConfig(names, tables) {
-  if(names.length<4 || names.length>8) return 'Misi perlukan 4 hingga 8 pemain.';
+  if(names.length<3 || names.length>8) return 'Misi perlukan 3 hingga 8 pemain.';
   if(names.some(n=>!n.trim() || n.trim().length>20)) return 'Isi setiap nama (maksimum 20 aksara).';
   if(new Set(names.map(n=>n.trim().toLocaleLowerCase('ms'))).size!==names.length) return 'Gunakan nama berbeza supaya undian jelas.';
   if(new Set(tables).size<2 || tables.some(t=>!Number.isInteger(t)||t<1||t>12)) return 'Pilih sekurang-kurangnya 2 sifir.';
@@ -46,8 +46,9 @@ export function newGame(names,tables,rng=Math.random,settings={}) {
   return {config,tables:[...tables],players:names.map((n,i)=>({id:i,name:n.trim(),color:COLORS[i],role:ids.includes(i)?'IMPOSTOR':'CREW',alive:true,suspicion:0,sabotageEnergy:0})),battery:config.startBattery,round:1,maxRounds:config.maxRounds,logs:[],records:[],turnResults:[],history:[],votes:{},winner:null,reason:null};
 }
 export function livePlayers(game) {return game.players.filter(p=>p.alive);}
-export function safeRound(game){return game.config.mode==='plus'&&game.round===1;}
-export function crisisActive(game){return game.config.mode==='plus'&&game.round>=2;}
+export function miniGame(game){return game.players.length===3;}
+export function safeRound(game){return (miniGame(game)||game.config.mode==='plus')&&game.round===1;}
+export function crisisActive(game){return !miniGame(game)&&game.config.mode==='plus'&&game.round>=2;}
 export function recordTurn(game,playerId,{correct=0,answered=0,attack=0}={}) {
   const p=game.players.find(p=>p.id===playerId);
   if(!p?.alive || game.turnResults.some(r=>r.playerId===playerId)) throw new Error('Giliran tidak sah atau telah direkodkan.');
@@ -110,7 +111,7 @@ export function voteResult(game) {
   }
   const remaining=livePlayers(game),imps=remaining.filter(p=>p.role==='IMPOSTOR').length;
   if(imps===0){game.winner='CREW';game.reason='Semua penyamar berjaya dikenal pasti.';}
-  else if(game.config.mode==='plus'&&remaining.length-imps<=imps){game.winner='IMPOSTOR';game.reason='Penyamar kini menyamai bilangan krew.';}
+  else if((miniGame(game)||game.config.mode==='plus')&&remaining.length-imps<=imps){game.winner='IMPOSTOR';game.reason='Penyamar kini menyamai bilangan krew.';}
   else if(game.round>=game.maxRounds){game.winner='IMPOSTOR';game.reason=`Penyamar bertahan selepas undian pusingan ${game.maxRounds}.`;}
   return {eliminated,warned,safe:safeRound(game),counts,tied:leaders.length>1};
 }

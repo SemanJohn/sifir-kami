@@ -10,8 +10,8 @@ const voteFor=(g,id)=>{g.votes={};for(const p of livePlayers(g))castVote(g,p.id,
 const skip=g=>{g.votes={};for(const p of livePlayers(g))castVote(g,p.id,'skip');return voteResult(g);};
 const play=(g,correct=3)=>{const spies=livePlayers(g).filter(p=>p.role==='IMPOSTOR').length;for(const p of livePlayers(g))recordTurn(g,p.id,p.role==='CREW'?{correct,answered:3}:{correct,answered:3,attack:25/spies});settleRound(g);};
 
-test('Misi+ uses two impostors only for seven or eight; classic remains one',()=>{
-  for(let n=4;n<=8;n++)for(const mode of ['classic','plus']){
+test('Misi+ uses two impostors only for seven or eight; Mini and classic remain one',()=>{
+  for(let n=3;n<=8;n++)for(const mode of ['classic','plus']){
     const g=make(n,{mode});assert.equal(g.players.filter(p=>p.role==='IMPOSTOR').length,impostorCount(n,mode));
     assert.equal(impostorCount(n,mode),mode==='plus'&&n>=7?2:1);
   }
@@ -66,6 +66,11 @@ test('lobby controls live over the responsive station canvas',()=>{
   assert.match(lobby,/lobby-hud/);assert.match(lobby,/stage-player-name/);assert.match(lobby,/station-tables/);
   assert.doesNotMatch(lobby,/player-grid|setup-tabs/);assert.match(lobby,/sheet-open/);assert.match(lobby,/setPlayerHandler\(lobbySheet\?null:openPlayerEditor\)/);assert.match(scene,/Phaser\.Scale\.RESIZE/);assert.match(scene,/setPlayerHandler/);
 });
+test('Home Screen updates are checked on launch, foreground and periodically',()=>{
+  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8'),manifest=readFileSync(new URL('../dist/manifest.webmanifest',import.meta.url),'utf8');
+  assert.match(app,/controllerchange/);assert.match(app,/visibilitychange/);assert.match(app,/setInterval\(checkAppUpdate,15\*60\*1000\)/);assert.match(app,/appUpdatePending.*screen==='LOBBY'/s);
+  assert.match(sw,/1\.5\.0/);assert.match(manifest,/icon-192-v1\.5\.png/);assert.ok(readFileSync(new URL('../dist/assets/icon-192-v1.5.png',import.meta.url)).length>1000);
+});
 test('Misi+ parity and configured final-round survival both end the game',()=>{
   const parity=make(7);parity.round=2;parity.players.filter(p=>p.role==='CREW').slice(0,3).forEach(p=>p.alive=false);skip(parity);assert.equal(parity.winner,'IMPOSTOR');
   const last=make(8,{maxRounds:5});last.round=5;skip(last);assert.equal(last.winner,'IMPOSTOR');assert.match(last.reason,/5/);
@@ -104,7 +109,7 @@ test('CSV quotes names, blocks formula injection and distinguishes timeouts',()=
 });
 test('named class groups save locally without affecting the active roster',()=>{
   const data=new Map();globalThis.localStorage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)};
-  const group=names(4);saveRoster('4 Bijak',group);group[0]='Changed';assert.equal(loadRosters()[0].names[0],'Murid 1');
-  saveRoster('4 Bijak',names(8));assert.equal(loadRosters().length,1);assert.equal(loadRosters()[0].names.length,8);
+  const group=names(3);saveRoster('Kumpulan Mini',group);group[0]='Changed';assert.equal(loadRosters()[0].names[0],'Murid 1');
+  saveRoster('Kumpulan Mini',names(8));assert.equal(loadRosters().length,1);assert.equal(loadRosters()[0].names.length,8);
   delete globalThis.localStorage;
 });

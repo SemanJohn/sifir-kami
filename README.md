@@ -1,10 +1,10 @@
 # Sifir Kami — Misi Angkasa
 
-Permainan web 2D berbahasa Melayu untuk 4–8 pemain sekolah rendah. Satu peranti diserahkan bergilir. Klasik mempunyai seorang penyamar; mod Misi+ mempunyai dua penyamar apabila ada 7–8 pemain.
+Permainan web 2D berbahasa Melayu untuk 3–8 pemain sekolah rendah. Satu peranti diserahkan bergilir. Mod Mini mengaktifkan 2 krew dan 1 penyamar untuk tepat 3 pemain; mod Klasik mempunyai seorang penyamar, manakala Misi+ mempunyai dua penyamar apabila ada 7–8 pemain.
 
-Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v1.4.0**.
+Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v1.5.0**.
 
-Kemas kini v1.4.0 memberi penyamar konsol sabotaj rahsia selepas menjawab sifir. Tenaga boleh digunakan terus atau disimpan ke pusingan seterusnya. Panel sifir kini turut menyekat sentuhan daripada menembusi ke watak di belakang.
+Kemas kini v1.5.0 menambah Mod Mini 3 pemain, ikon Home Screen maskot baharu, dan semakan kemas kini automatik semasa aplikasi dibuka atau kembali aktif. Kemas kini v1.4.0 memberi penyamar konsol sabotaj rahsia selepas menjawab sifir.
 
 ## Cuba dan main
 
@@ -15,6 +15,13 @@ Kemas kini v1.4.0 memberi penyamar konsol sabotaj rahsia selepas menjawab sifir.
 5. Undi seri atau undi “Langkau” tertinggi menyebabkan tiada penyingkiran. Pemain yang disingkirkan menjadi pemerhati.
 
 Krew menang jika bateri mencapai 100% atau semua penyamar disingkirkan. Penyamar menang apabila bateri mencapai 0% atau kekal aktif selepas undian terakhir. Keputusan bateri didahulukan sebelum mesyuarat. Lalai 3 pusingan; guru boleh memilih 2–5.
+
+## Mod Mini 3 pemain v1.5.0
+
+- Diaktifkan secara automatik apabila tepat 3 pemain menyertai misi: 2 krew dan 1 penyamar.
+- Undian Pusingan 1 ialah amaran selamat; tiada sesiapa disingkirkan.
+- Mulai Pusingan 2, penyamar yang disingkirkan memberi kemenangan kepada krew. Jika seorang krew disingkirkan, penyamar menang kerana nisbah menjadi 1 lawan 1.
+- Bateri dan kesukaran kekal dinormalkan supaya permainan tiga orang masih seimbang.
 
 ## Sabotaj pilihan v1.4.0
 
@@ -46,13 +53,13 @@ Gabungan ini mengadaptasi idea dan komponen daripada ZIP edisi Claude yang dibek
 - **Dikekalkan daripada versi asal:** watak berwajah comel yang sama, latar stesen, Phaser 3.90.0, susun atur satu skrin, pengesahan sentuhan setiap soalan, larangan undi diri sendiri, dan bateri dikira pada akhir pusingan.
 - **Pembelajaran Claude:** soalan adaptif berasaskan kesilapan dalam misi semasa, laporan murid/sifir, eksport CSV, maklum balas sentuhan ringan dan petunjuk ringkas selepas jawapan salah.
 - **Kaedah Sifir Juara:** semua tiga jawapan ditaip sendiri pada papan nombor terbina dalam; ⌫ memadam dan ✓ menghantar. Tiada pilihan jawapan untuk diteka.
-- **Tetapan guru:** buka ⚙ di lobi. Pilih mod, 2–5 pusingan, 10–90 saat giliran, 30–240 saat mesyuarat, bateri mula 20–80%, tanpa pemasa, teks besar, animasi berkurang dan simpan/muat kumpulan 4–8 murid.
+- **Tetapan guru:** buka ⚙ di lobi. Pilih mod, 2–5 pusingan, 10–90 saat giliran, 30–240 saat mesyuarat, bateri mula 20–80%, tanpa pemasa, teks besar, animasi berkurang dan simpan/muat kumpulan 3–8 murid.
 - **Misi+ pilihan:** dua penyamar untuk 7–8 pemain, pusingan pertama hanya amaran, krisis mulai pusingan 2. Satu kombo krew membaiki krisis (+6%); tiada kombo menyebabkan −8%. Penyamar juga menang apabila bilangannya menyamai krew.
 - **Privasi permainan:** log tidak menyenaraikan nama pelaku. Kesilapan matematik tidak terus membocorkan peranan. Rakan penyamar hanya didedahkan pada kad peranan rahsia.
 - **Laporan pembelajaran:** soalan yang telah dilihat tetapi kehabisan masa direkod salah sekali; soalan yang belum pernah dipaparkan tidak direka sebagai jawapan salah. Data sedikit ditandai, bukan dilabel mahir.
 - **Paparan:** tetapan, sifir laporan dan murid dipaginasi. Papan nombor terbina dalam tidak memanggil papan kekunci telefon. Skrin selesai menyediakan butang untuk menamatkan giliran awal; CSV menyimpan semua jawapan.
 
-Laporan hanya dalam memori: eksport sebelum main semula atau muat semula. Nama kumpulan dan tetapan disimpan setempat. Muat semula automatik hanya berlaku di lobi, bukan semasa misi atau membaca laporan. CSV melindungi nama yang menyerupai formula spreadsheet.
+Laporan hanya dalam memori: eksport sebelum main semula atau muat semula. Nama kumpulan dan tetapan disimpan setempat. Aplikasi menyemak versi baharu ketika dilancarkan, kembali aktif, dan setiap 15 minit; muat semula ditangguhkan sehingga kembali ke lobi supaya misi tidak terganggu. CSV melindungi nama yang menyerupai formula spreadsheet.
 
 ## Kemas kini v1.0.1
 
@@ -104,9 +111,9 @@ Uji logik permainan dengan Node.js 20+: `npm test`. Tidak perlu `npm install`: e
 
 ## Webapp pada telefon
 
-Pada iPhone, buka laman HTTPS dalam Safari, pilih **Share → Add to Home Screen**. Pada Android, gunakan pilihan pemasangan aplikasi pelayar jika tersedia. Permainan boleh dibuka semula tanpa internet selepas semua aset berjaya dicache pada lawatan pertama. Fon web mempunyai pengganti tempatan. Pengesahan akaun untuk URL pratonton persendirian mungkin masih memerlukan internet; GitHub Pages biasa tidak memerlukan akaun untuk bermain.
+Pada iPhone, buka laman HTTPS dalam Safari, pilih **Share → Add to Home Screen**. Pada Android, gunakan pilihan pemasangan aplikasi pelayar jika tersedia. Ikon baharu menggunakan maskot angkasawan comel Sifir Kami. Permainan boleh dibuka semula tanpa internet selepas semua aset berjaya dicache pada lawatan pertama. Fon web mempunyai pengganti tempatan. Pengesahan akaun untuk URL pratonton persendirian mungkin masih memerlukan internet; GitHub Pages biasa tidak memerlukan akaun untuk bermain.
 
-Service worker mengaktifkan cache baharu selepas semua aset dimuat turun. Aplikasi memuat semula secara automatik hanya ketika berada di lobi; sesi dan laporan aktif diteruskan. Untuk menaik taraf versi lama, tutup dan buka semula aplikasi selepas kemas kini dimuat turun. Apabila menerbitkan versi baharu, tukar versi cache dalam `dist/sw.js` serta nombor versi paparan dan `package.json`.
+Service worker mengaktifkan cache baharu selepas semua aset dimuat turun. Aplikasi menyemak kemas kini ketika dilancarkan, kembali aktif, dan setiap 15 minit. Muat semula berlaku hanya ketika berada di lobi; sesi dan laporan aktif diteruskan sehingga selamat. Apabila menerbitkan versi baharu, tukar versi cache dalam `dist/sw.js` serta nombor versi paparan dan `package.json`.
 
 ## Struktur
 
@@ -120,6 +127,8 @@ Service worker mengaktifkan cache baharu selepas semua aset dimuat turun. Aplika
 - `dist/game.js` — penjana matematik, skor, pusingan dan undian.
 - `dist/scene.js` — adegan Phaser, sprite watak asli dan animasi.
 - `dist/assets/station.png` — latar stesen yang dijana untuk projek ini.
+- `dist/assets/app-icon-master.png` — sumber ikon maskot Home Screen.
+- `dist/assets/icon-*-v1.5.png` — ikon Home Screen berversi.
 - `dist/sw.js`, `dist/manifest.webmanifest` — cache dan metadata PWA.
 - `tests/game.test.js` — ujian logik dan simulasi permainan.
 

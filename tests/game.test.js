@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SABOTAGE_MAX,newGame,crewQuestion,anuQuestion,checkTaskAnswer,sabotageReward,chargeSabotage,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,voteCandidates,canVoteFor,castVote} from '../dist/game.js';
+import {SABOTAGE_MAX,newGame,crewQuestion,anuQuestion,checkTaskAnswer,sabotageReward,chargeSabotage,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,voteCandidates,canVoteFor,castVote,crisisActive} from '../dist/game.js';
 import {createAnswerInput,createActionGuard,deviceClass} from '../dist/input.js';
 import {toggleTable} from '../dist/settings.js';
 const names=n=>Array.from({length:n},(_,i)=>`Pemain ${i+1}`);
@@ -26,8 +26,8 @@ test('default tables 2 through 5 can each be unticked',()=>{
   assert.deepEqual(tables,[]);assert.deepEqual(toggleTable([],5),[5]);
 });
 test('configuration rejects invalid rosters and fewer than two tables',()=>{
-  assert.ok(validateConfig(names(3),[2,3]));assert.ok(validateConfig(names(9),[2,3]));assert.ok(validateConfig(['Ali','ali','B','C'],[2,3]));assert.ok(validateConfig(names(4),[1]));assert.equal(validateConfig(names(8),[1,2]),'');
-  for(let n=4;n<=8;n++)assert.equal(make(n).players.filter(p=>p.role==='IMPOSTOR').length,1);
+  assert.ok(validateConfig(names(2),[2,3]));assert.ok(validateConfig(names(9),[2,3]));assert.ok(validateConfig(['Ali','ali','B'],[2,3]));assert.ok(validateConfig(names(3),[1]));assert.equal(validateConfig(names(3),[1,2]),'');
+  for(let n=3;n<=8;n++)assert.equal(make(n).players.filter(p=>p.role==='IMPOSTOR').length,1);
 });
 test('impostors earn escalating streak energy, split it in Misi+, and bank at 50%',()=>{
   assert.deepEqual([1,2,3].map(n=>sabotageReward(n)),[5,8,12]);
@@ -37,11 +37,20 @@ test('impostors earn escalating streak energy, split it in Misi+, and bank at 50
   const g=make(),spy=g.players.find(p=>p.role==='IMPOSTOR');assert.equal(spy.sabotageEnergy,0);spy.sabotageEnergy=25;
   for(const p of g.players)recordTurn(g,p.id);settleRound(g);skip(g);nextRound(g);assert.equal(spy.sabotageEnergy,25);
 });
-test('4 through 8 players receive equal maximum round charge and complete three rounds',()=>{
-  for(let n=4;n<=8;n++){
+test('3 through 8 players receive equal maximum round charge and complete three rounds',()=>{
+  for(let n=3;n<=8;n++){
     const g=make(n);play(g);assert.equal(g.battery,70);assert.equal(g.winner,null);skip(g);nextRound(g);
     play(g);assert.equal(g.battery,90);skip(g);nextRound(g);play(g);assert.equal(g.battery,100);assert.equal(g.winner,'CREW');
   }
+});
+test('three-player Mini mode has a safe first vote and an impostor 1v1 victory',()=>{
+  const g=make(3),spy=g.players.find(p=>p.role==='IMPOSTOR'),crew=g.players.find(p=>p.role==='CREW');
+  const configuredPlus=newGame(names(3),[2,3],()=>0,{mode:'plus'});configuredPlus.round=2;assert.equal(crisisActive(configuredPlus),false);
+  g.votes={[spy.id]:crew.id,[crew.id]:'skip',[g.players.find(p=>p.id!==spy.id&&p.id!==crew.id).id]:crew.id};
+  const warning=voteResult(g);assert.equal(warning.safe,true);assert.equal(warning.warned.id,crew.id);assert.equal(crew.alive,true);assert.equal(g.winner,null);
+  nextRound(g);g.votes={[spy.id]:crew.id,[crew.id]:'skip',[g.players.find(p=>p.alive&&p.id!==spy.id&&p.id!==crew.id).id]:crew.id};
+  const result=voteResult(g);assert.equal(result.eliminated.id,crew.id);assert.equal(g.winner,'IMPOSTOR');assert.match(g.reason,/menyamai/);
+  const caught=make(3);caught.round=2;caught.votes={0:'skip',1:0,2:0};voteResult(caught);assert.equal(caught.winner,'CREW');
 });
 test('only round settlement changes the battery; player ordering is irrelevant',()=>{
   const a=make(),b=make();

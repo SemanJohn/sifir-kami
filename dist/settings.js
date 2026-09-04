@@ -19,7 +19,7 @@ export function toggleTable(tables,value){
 }
 const ROSTERS='sifir-kami-class-rosters';
 export function loadRosters(){
-  try{return JSON.parse(localStorage.getItem(ROSTERS)||'[]').filter(r=>typeof r.name==='string'&&Array.isArray(r.names)&&r.names.length>=4&&r.names.length<=8&&r.names.every(n=>typeof n==='string')).slice(0,12);}catch{return [];}
+  try{return JSON.parse(localStorage.getItem(ROSTERS)||'[]').filter(r=>typeof r.name==='string'&&Array.isArray(r.names)&&r.names.length>=3&&r.names.length<=8&&r.names.every(n=>typeof n==='string')).slice(0,12);}catch{return [];}
 }
 export function saveRoster(label,names){
   const title=String(label).trim().slice(0,30);if(!title)throw Error('Isi nama kumpulan dahulu.');
