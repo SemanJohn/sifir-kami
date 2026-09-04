@@ -7,6 +7,7 @@ button,select,input{touch-action:manipulation}
 .icon-button{border-radius:11px;background:#172338;border-color:#31435b;box-shadow:none}
 #stage-shell{position:relative;display:flex;flex:1;min-height:0;overflow:hidden;background:#101827}
 #stage{position:absolute;inset:0;width:100%;height:100%}
+#stage-shell.sheet-open #stage{pointer-events:none}
 #lobby-hud{position:absolute;inset:12px 12px auto;z-index:4;pointer-events:none;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 #lobby-hud[hidden]{display:none!important}
 .lobby-hud-actions{display:flex;gap:8px;pointer-events:auto}
@@ -14,7 +15,7 @@ button,select,input{touch-action:manipulation}
 .lobby-hud-actions button b{display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:var(--amber);color:#172237;font-size:21px;line-height:1}
 .lobby-hud-actions button i{display:grid;place-items:center;min-width:24px;height:24px;padding:0 5px;border-radius:12px;background:var(--mint);color:#10243a;font-size:12px;font-style:normal}
 #lobby-hud>p{max-width:245px;padding:8px 11px;border-radius:10px;background:#0a1423d9;color:#e6eef7;font-size:13px;line-height:1.25;text-align:right;box-shadow:0 5px 18px #02071270}
-#lobby-sheet{position:absolute;z-index:6;left:50%;bottom:12px;transform:translateX(-50%);width:min(520px,calc(100% - 24px));max-height:calc(100% - 76px);padding:16px;border:1px solid #668298;border-radius:18px;background:linear-gradient(160deg,#17283ef7,#101c30f7);box-shadow:0 15px 44px #020610c9;overflow:hidden}
+#lobby-sheet{position:absolute;z-index:6;left:50%;bottom:12px;transform:translateX(-50%);width:min(520px,calc(100% - 24px));max-height:calc(100% - 76px);padding:16px;border:1px solid #668298;border-radius:18px;background:linear-gradient(160deg,#17283ef7,#101c30f7);box-shadow:0 15px 44px #020610c9;overflow:hidden;pointer-events:auto;touch-action:manipulation}
 .station-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
 .station-sheet-head>div>span,.player-edit-head label>span{display:block;color:var(--mint);font-size:12px;letter-spacing:.8px;text-transform:uppercase}
 .station-sheet-head h2{font-size:25px}
@@ -86,6 +87,13 @@ select:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .keypad-mode .math-prompt{font-size:clamp(38px,6dvh,56px);min-height:42px}
 .keypad-mode .feedback{min-height:29px;font-size:14px}
 .finish-turn{max-width:280px;margin-top:6px}
+.sabotage-console{width:100%;max-width:430px;margin:auto;gap:12px}
+.sabotage-console h2{font-size:clamp(38px,8dvh,58px);color:#ffb4a8;line-height:1}
+.sabotage-meter{width:100%;height:13px;border:1px solid #725269;border-radius:999px;background:#111b2c;overflow:hidden}
+.sabotage-meter i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff8794,#ff5470);box-shadow:0 0 15px #ff547080}
+.sabotage-console p{max-width:330px;color:var(--muted);font-size:15px;line-height:1.35}
+.sabotage-console .sabotage-button,.sabotage-console .finish-turn{width:100%;max-width:360px;min-height:48px;margin-top:0;font-weight:800}
+.sabotage-console .sabotage-button{background:linear-gradient(160deg,#6d3442,#4b2635);border-color:#d57684;color:#ffe5e8}
 .winner-avatars{display:flex;align-items:center;justify-content:center;gap:10px;min-height:0;flex:0 1 auto}
 .winner-avatars .big-avatar{max-height:105px}
 .game-over-panel .end-actions{grid-template-columns:1fr 1fr}

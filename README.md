@@ -2,24 +2,32 @@
 
 Permainan web 2D berbahasa Melayu untuk 4–8 pemain sekolah rendah. Satu peranti diserahkan bergilir. Klasik mempunyai seorang penyamar; mod Misi+ mempunyai dua penyamar apabila ada 7–8 pemain.
 
-Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v1.3.1**.
+Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v1.4.0**.
 
-Pembetulan v1.3.1 memastikan sifir asal 2–5 boleh dinyahpilih satu demi satu pada telefon dan mengabaikan klik sintetik berganda yang boleh menghidupkan semula pilihan tadi.
+Kemas kini v1.4.0 memberi penyamar konsol sabotaj rahsia selepas menjawab sifir. Tenaga boleh digunakan terus atau disimpan ke pusingan seterusnya. Panel sifir kini turut menyekat sentuhan daripada menembusi ke watak di belakang.
 
 ## Cuba dan main
 
 1. Lobi ialah skrin kapal interaktif. Tekan **＋** untuk menambah pemain; tekan mana-mana watak untuk mengubah nama atau membuangnya. Tekan **Sifir** dalam animasi dan pilih sekurang-kurangnya dua sifir (1–12), kemudian tekan **Mula misi** di bawah kapal.
 2. Ikut nama pada skrin. Tekan dan tahan untuk melihat peranan; lepaskan untuk menutupnya.
-3. Setiap pemain, termasuk penyamar, menjawab tiga soalan darab dengan menaip sendiri pada papan nombor. Selepas soalan ketiga, tekan **Tamat giliran** tanpa perlu menunggu baki masa.
+3. Setiap pemain, termasuk penyamar, menjawab tiga soalan darab dengan menaip sendiri pada papan nombor. Selepas soalan ketiga, krew boleh tamatkan giliran; penyamar memilih **Sabotaj sekarang** atau **Simpan untuk pusingan seterusnya**.
 4. Bateri dan petunjuk tanpa nama dipaparkan selepas semua giliran. Bincang sehingga 90 saat, kemudian undi seorang demi seorang. Pemain hanya boleh memilih pemain aktif yang lain; undi diri sendiri tidak dibenarkan.
 5. Undi seri atau undi “Langkau” tertinggi menyebabkan tiada penyingkiran. Pemain yang disingkirkan menjadi pemerhati.
 
-Krew menang jika bateri mencapai 100% atau semua penyamar disingkirkan. Penyamar menang apabila bateri mencapai 0% atau kekal aktif selepas undian terakhir. Keputusan bateri didahulukan sebelum mesyuarat. Lalai 3 pusingan; guru boleh memilih 2–6.
+Krew menang jika bateri mencapai 100% atau semua penyamar disingkirkan. Penyamar menang apabila bateri mencapai 0% atau kekal aktif selepas undian terakhir. Keputusan bateri didahulukan sebelum mesyuarat. Lalai 3 pusingan; guru boleh memilih 2–5.
+
+## Sabotaj pilihan v1.4.0
+
+- Penyamar menerima soalan sifir yang sama seperti krew. Jawapan tepat berturut-turut memberi tenaga sabotaj **+5%, +8%, kemudian +12%**.
+- Selepas soalan ketiga, butang rahsia membolehkan penyamar menggunakan semua tenaga tersimpan. Jika tidak ditekan, tenaga dibawa ke pusingan seterusnya sehingga maksimum **50%**.
+- Dalam Misi+ dengan dua penyamar aktif, ganjaran tenaga dibahagi dua supaya jumlah kekuatan pasukan kekal seimbang.
+- Hanya serangan yang benar-benar dilancarkan mengurangkan bateri. Pusingan tanpa serangan tidak menghasilkan sebarang log sabotaj atau “tiada gangguan”.
+- Ketika panel sifir atau penyunting nama dibuka, interaksi kanvas watak dimatikan supaya sentuhan sifir 2–5 tidak membuka skrin ubah nama di belakang.
 
 ## Soalan seragam & ANU v1.3.0
 
 - Krew dan penyamar menerima bentuk soalan darab serta maklum balas skrin yang sama. Ini menguji sifir penyamar tanpa membocorkan peranan melalui rupa tugasan.
-- Jawapan tepat krew mengecas kapal; jawapan tepat penyamar melakukan sabotaj secara rahsia. Imbangan bateri maksimum masih sama.
+- Jawapan tepat krew mengecas kapal; jawapan tepat penyamar mengumpul tenaga untuk serangan pilihan selepas tugasan.
 - Butang **ANU · Cari faktor hilang** ditambah dalam panel pemilihan sifir. Apabila aktif, satu daripada tiga soalan setiap giliran dipilih secara rawak sebagai `? × 8 = 48` atau `6 × ? = 48`.
 - Laporan guru kini mengira ketepatan sifir semua pemain, termasuk penyamar, dan CSV menandai soalan ANU.
 
@@ -38,7 +46,7 @@ Gabungan ini mengadaptasi idea dan komponen daripada ZIP edisi Claude yang dibek
 - **Dikekalkan daripada versi asal:** watak berwajah comel yang sama, latar stesen, Phaser 3.90.0, susun atur satu skrin, pengesahan sentuhan setiap soalan, larangan undi diri sendiri, dan bateri dikira pada akhir pusingan.
 - **Pembelajaran Claude:** soalan adaptif berasaskan kesilapan dalam misi semasa, laporan murid/sifir, eksport CSV, maklum balas sentuhan ringan dan petunjuk ringkas selepas jawapan salah.
 - **Kaedah Sifir Juara:** semua tiga jawapan ditaip sendiri pada papan nombor terbina dalam; ⌫ memadam dan ✓ menghantar. Tiada pilihan jawapan untuk diteka.
-- **Tetapan guru:** buka ⚙ di lobi. Pilih mod, 2–6 pusingan, 10–90 saat giliran, 30–240 saat mesyuarat, bateri mula 20–80%, tanpa pemasa, teks besar, animasi berkurang dan simpan/muat kumpulan 4–8 murid.
+- **Tetapan guru:** buka ⚙ di lobi. Pilih mod, 2–5 pusingan, 10–90 saat giliran, 30–240 saat mesyuarat, bateri mula 20–80%, tanpa pemasa, teks besar, animasi berkurang dan simpan/muat kumpulan 4–8 murid.
 - **Misi+ pilihan:** dua penyamar untuk 7–8 pemain, pusingan pertama hanya amaran, krisis mulai pusingan 2. Satu kombo krew membaiki krisis (+6%); tiada kombo menyebabkan −8%. Penyamar juga menang apabila bilangannya menyamai krew.
 - **Privasi permainan:** log tidak menyenaraikan nama pelaku. Kesilapan matematik tidak terus membocorkan peranan. Rakan penyamar hanya didedahkan pada kad peranan rahsia.
 - **Laporan pembelajaran:** soalan yang telah dilihat tetapi kehabisan masa direkod salah sekali; soalan yang belum pernah dipaparkan tidak direka sebagai jawapan salah. Data sedikit ditandai, bukan dilabel mahir.
@@ -68,11 +76,11 @@ Laporan hanya dalam memori: eksport sebelum main semula atau muat semula. Nama k
 
 ### Bateri seimbang
 
-Bateri mula 50%. Jika terdapat `C` krew aktif, setiap jawapan betul menambah `9/C` peratus dan kombo tiga betul menambah `18/C` peratus. Tiga soalan dan kombo penuh memberikan `45/C` peratus kepada setiap krew. Tiga jawapan tepat penyamar memberi jumlah −25%; tiga jawapan salah penyamar memberi jumlah +5%; tamat masa tanpa menjawab adalah neutral. Jumlah dikepit pada 0–100 dan dibundarkan satu tempat perpuluhan pada akhir pusingan.
+Bateri mula 50%. Jika terdapat `C` krew aktif, setiap jawapan betul menambah `9/C` peratus dan kombo tiga betul menambah `18/C` peratus. Tiga soalan dan kombo penuh memberikan `45/C` peratus kepada setiap krew. Streak tiga jawapan tepat memberi penyamar 5% + 8% + 12% = 25% tenaga. Serangan hanya berlaku apabila butang rahsia ditekan; tamat masa atau pilihan simpan tidak mengubah bateri. Jumlah dikepit pada 0–100 dan dibundarkan satu tempat perpuluhan pada akhir pusingan.
 
 Contoh 4 pemain: 3 krew × 15% = +45%. Dengan sabotaj berjaya, perubahan bersih ialah +20%, sama seperti pasukan 8 pemain apabila semua krew sempurna. Pelarasan ini ialah permulaan imbangan; keseronokan sebenar perlu dicuba dengan murid.
 
-Dalam kedua-dua mod, jumlah sabotaj sempurna semua penyamar kekal −25% sepusingan, dibahagi kepada `3 × bilangan penyamar aktif` jawapan darab. Semua jawapan salah memberikan +5% keseluruhan; tamat masa neutral. Bonus/penalti krisis dikira sekali sebelum bateri dikepit. Ini mengelakkan bilangan pemain dan turutan giliran mengubah imbangan asas.
+Dalam kedua-dua mod, jumlah tenaga baharu daripada streak sempurna semua penyamar kekal 25% sepusingan dan dibahagi antara penyamar aktif. Setiap penyamar boleh menyimpan sehingga 50% dan menggunakan semua simpanannya dalam satu serangan. Bonus/penalti krisis dikira sekali sebelum bateri dikepit.
 
 ## Terbit melalui GitHub Pages
 

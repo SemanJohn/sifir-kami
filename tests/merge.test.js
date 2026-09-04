@@ -8,7 +8,7 @@ const names=n=>Array.from({length:n},(_,i)=>`Murid ${i+1}`);
 const make=(n=8,settings={})=>newGame(names(n),[2,3,6,8],()=>0,{mode:'plus',...settings});
 const voteFor=(g,id)=>{g.votes={};for(const p of livePlayers(g))castVote(g,p.id,p.id===id?'skip':id);return voteResult(g);};
 const skip=g=>{g.votes={};for(const p of livePlayers(g))castVote(g,p.id,'skip');return voteResult(g);};
-const play=(g,correct=3,hits=3)=>{for(const p of livePlayers(g))recordTurn(g,p.id,p.role==='CREW'?{correct,answered:3}:{hits,backfires:3-hits,correct:hits,answered:3,table:6,intruder:13});settleRound(g);};
+const play=(g,correct=3)=>{const spies=livePlayers(g).filter(p=>p.role==='IMPOSTOR').length;for(const p of livePlayers(g))recordTurn(g,p.id,p.role==='CREW'?{correct,answered:3}:{correct,answered:3,attack:25/spies});settleRound(g);};
 
 test('Misi+ uses two impostors only for seven or eight; classic remains one',()=>{
   for(let n=4;n<=8;n++)for(const mode of ['classic','plus']){
@@ -37,14 +37,14 @@ test('failed crisis penalizes once; battery changes only after the full round',(
   for(const p of livePlayers(g))recordTurn(g,p.id,{correct:0,answered:0});
   assert.equal(g.battery,50);settleRound(g);assert.equal(g.battery,42);assert.equal(g.history[0].crisis,-8);assert.throws(()=>settleRound(g));
 });
-test('two impostors share total sabotage damage, including a neutral timeout',()=>{
+test('two impostors can deploy their separately earned share',()=>{
   const g=make(),spies=g.players.filter(p=>p.role==='IMPOSTOR');
-  for(const p of g.players)recordTurn(g,p.id,p.id===spies[0].id?{hits:3}:{});
+  for(const p of g.players)recordTurn(g,p.id,p.id===spies[0].id?{correct:3,answered:3,attack:12.5}:{});
   settleRound(g);assert.equal(g.battery,37.5);
 });
-test('three typed sabotage attempts preserve Classic battery balance',()=>{
+test('a secret sabotage press applies only the stored amount',()=>{
   const g=make(4,{mode:'classic'}),spy=g.players.find(p=>p.role==='IMPOSTOR');
-  for(const p of g.players)recordTurn(g,p.id,p.id===spy.id?{hits:1,backfires:2,answered:3}:{correct:0,answered:0});
+  for(const p of g.players)recordTurn(g,p.id,p.id===spy.id?{correct:1,answered:3,attack:5}:{correct:0,answered:0});
   settleRound(g);assert.equal(g.battery,45);
 });
 test('all roles receive the same typed multiplication task and can finish immediately',()=>{
@@ -52,7 +52,7 @@ test('all roles receive the same typed multiplication task and can finish immedi
   const draw=source.slice(source.indexOf('function drawQuestion'),source.indexOf('function tickTask'));
   assert.match(draw,/q\.mode='keypad'/);assert.match(draw,/class="keypad"/);assert.doesNotMatch(draw,/class="answer-grid"/);
   assert.doesNotMatch(draw,/IMPOSTOR|impostorQuestion|Bukan sifir|bukan gandaan/);
-  assert.match(source,/data-action="task-finish">Tamat giliran/);
+  assert.match(source,/data-action="task-finish">Tamat giliran/);assert.match(source,/data-action="task-sabotage"/);assert.match(source,/Simpan untuk pusingan seterusnya/);
 });
 test('ANU is a persisted lobby option and guarantees one missing-factor question per turn',()=>{
   const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
@@ -64,7 +64,7 @@ test('lobby controls live over the responsive station canvas',()=>{
   const scene=readFileSync(new URL('../dist/scene.js',import.meta.url),'utf8');
   const lobby=app.slice(app.indexOf('function renderLobby'),app.indexOf('function dots'));
   assert.match(lobby,/lobby-hud/);assert.match(lobby,/stage-player-name/);assert.match(lobby,/station-tables/);
-  assert.doesNotMatch(lobby,/player-grid|setup-tabs/);assert.match(scene,/Phaser\.Scale\.RESIZE/);assert.match(scene,/setPlayerHandler/);
+  assert.doesNotMatch(lobby,/player-grid|setup-tabs/);assert.match(lobby,/sheet-open/);assert.match(lobby,/setPlayerHandler\(lobbySheet\?null:openPlayerEditor\)/);assert.match(scene,/Phaser\.Scale\.RESIZE/);assert.match(scene,/setPlayerHandler/);
 });
 test('Misi+ parity and configured final-round survival both end the game',()=>{
   const parity=make(7);parity.round=2;parity.players.filter(p=>p.role==='CREW').slice(0,3).forEach(p=>p.alive=false);skip(parity);assert.equal(parity.winner,'IMPOSTOR');
@@ -73,7 +73,7 @@ test('Misi+ parity and configured final-round survival both end the game',()=>{
 test('settings are bounded and malformed stored settings fall back safely',()=>{
   assert.equal(normalizeSettings(null).maxRounds,3);
   const c=normalizeSettings({maxRounds:99,turnDuration:-1,discussionDuration:999,startBattery:100,keypadFromRound:99,timerOff:true});
-  assert.equal(c.maxRounds,6);assert.equal(c.turnDuration,10);assert.equal(c.discussionDuration,240);assert.equal(c.startBattery,80);assert.equal(c.keypadFromRound,99);assert.equal(c.timerOff,true);
+  assert.equal(c.maxRounds,5);assert.equal(c.turnDuration,10);assert.equal(c.discussionDuration,240);assert.equal(c.startBattery,80);assert.equal(c.keypadFromRound,99);assert.equal(c.timerOff,true);
 });
 test('typed multiplication uses the exact mathematical answer for every role',()=>{
   assert.equal(checkTaskAnswer({table:6,multiplier:4,answer:24,mode:'keypad'},24),true);

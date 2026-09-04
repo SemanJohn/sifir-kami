@@ -1,5 +1,5 @@
 const PREFIX='sifir-kami:'+self.registration.scope+':';
-const CACHE=PREFIX+'1.3.1';
+const CACHE=PREFIX+'1.4.0';
 const FILES=['./','./index.html','./style.css','./merge.css','./app.js','./game.js','./input.js','./settings.js','./learning.js','./scene.js','./manifest.webmanifest','./vendor/phaser.min.js','./assets/station.png','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES.map(path=>new Request(path,{cache:'reload'})))).then(()=>self.skipWaiting())));
 // Activate fixed assets immediately. The app reloads only at the lobby;

@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {newGame,crewQuestion,anuQuestion,checkTaskAnswer,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,voteCandidates,canVoteFor,castVote} from '../dist/game.js';
+import {SABOTAGE_MAX,newGame,crewQuestion,anuQuestion,checkTaskAnswer,sabotageReward,chargeSabotage,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,voteCandidates,canVoteFor,castVote} from '../dist/game.js';
 import {createAnswerInput,createActionGuard,deviceClass} from '../dist/input.js';
 import {toggleTable} from '../dist/settings.js';
 const names=n=>Array.from({length:n},(_,i)=>`Pemain ${i+1}`);
 const make=(n=4)=>newGame(names(n),[1,2,3,4],()=>0);
-const play=(g,correct=3,success=true)=>{for(const p of livePlayers(g))recordTurn(g,p.id,p.role==='CREW'?{correct,answered:3}:{success,table:2,intruder:3});settleRound(g);};
+const play=(g,correct=3,attack=25)=>{for(const p of livePlayers(g))recordTurn(g,p.id,p.role==='CREW'?{correct,answered:3}:{correct,answered:3,attack});settleRound(g);};
 const skip=g=>{g.votes=Object.fromEntries(livePlayers(g).map(p=>[p.id,'skip']));return voteResult(g);};
 
 test('finite unique crew options for all tables and endpoint RNG values',()=>{
@@ -29,6 +29,14 @@ test('configuration rejects invalid rosters and fewer than two tables',()=>{
   assert.ok(validateConfig(names(3),[2,3]));assert.ok(validateConfig(names(9),[2,3]));assert.ok(validateConfig(['Ali','ali','B','C'],[2,3]));assert.ok(validateConfig(names(4),[1]));assert.equal(validateConfig(names(8),[1,2]),'');
   for(let n=4;n<=8;n++)assert.equal(make(n).players.filter(p=>p.role==='IMPOSTOR').length,1);
 });
+test('impostors earn escalating streak energy, split it in Misi+, and bank at 50%',()=>{
+  assert.deepEqual([1,2,3].map(n=>sabotageReward(n)),[5,8,12]);
+  assert.deepEqual([1,2,3].map(n=>sabotageReward(n,2)),[2.5,4,6]);
+  assert.equal(chargeSabotage(0,1),5);assert.equal(chargeSabotage(5,2),13);assert.equal(chargeSabotage(13,3),25);
+  assert.equal(chargeSabotage(49,3),SABOTAGE_MAX);
+  const g=make(),spy=g.players.find(p=>p.role==='IMPOSTOR');assert.equal(spy.sabotageEnergy,0);spy.sabotageEnergy=25;
+  for(const p of g.players)recordTurn(g,p.id);settleRound(g);skip(g);nextRound(g);assert.equal(spy.sabotageEnergy,25);
+});
 test('4 through 8 players receive equal maximum round charge and complete three rounds',()=>{
   for(let n=4;n<=8;n++){
     const g=make(n);play(g);assert.equal(g.battery,70);assert.equal(g.winner,null);skip(g);nextRound(g);
@@ -37,15 +45,22 @@ test('4 through 8 players receive equal maximum round charge and complete three 
 });
 test('only round settlement changes the battery; player ordering is irrelevant',()=>{
   const a=make(),b=make();
-  for(const p of a.players)recordTurn(a,p.id,p.role==='CREW'?{correct:3,answered:3}:{success:true});
+  for(const p of a.players)recordTurn(a,p.id,p.role==='CREW'?{correct:3,answered:3}:{correct:3,answered:3,attack:25});
   assert.equal(a.battery,50);settleRound(a);
-  for(const p of [...b.players].reverse())recordTurn(b,p.id,p.role==='CREW'?{correct:3,answered:3}:{success:true});settleRound(b);
+  for(const p of [...b.players].reverse())recordTurn(b,p.id,p.role==='CREW'?{correct:3,answered:3}:{correct:3,answered:3,attack:25});settleRound(b);
   assert.equal(a.battery,b.battery);assert.throws(()=>settleRound(b));assert.throws(()=>recordTurn(b,0,{}));
 });
-test('battery zero, failed sabotage and timeout outcomes are correct',()=>{
+test('battery zero, saved sabotage and timeout outcomes are correct',()=>{
   const zero=make();play(zero,0);assert.equal(zero.battery,25);skip(zero);nextRound(zero);play(zero,0);assert.equal(zero.battery,0);assert.equal(zero.winner,'IMPOSTOR');
-  const failed=make();play(failed,0,false);assert.equal(failed.battery,55);
+  const saved=make();play(saved,0,0);assert.equal(saved.battery,50);assert.equal(saved.logs.length,2);assert.ok(saved.logs.every(log=>!(/sabotaj|gangguan/i.test(log.text))));
   const timeout=make();for(const p of timeout.players)recordTurn(timeout,p.id);settleRound(timeout);assert.equal(timeout.battery,50);
+});
+test('only a deployed attack changes the battery or adds a sabotage log',()=>{
+  const g=make(),spy=g.players.find(p=>p.role==='IMPOSTOR');
+  for(const p of g.players)recordTurn(g,p.id,p.id===spy.id?{correct:3,answered:3,attack:25}:{correct:0,answered:0});
+  settleRound(g);assert.equal(g.battery,25);assert.equal(g.logs.filter(log=>/sabotaj/i.test(log.text)).length,1);
+  const invalid=make(),crew=invalid.players.find(p=>p.role==='CREW'),impostor=invalid.players.find(p=>p.role==='IMPOSTOR');
+  assert.throws(()=>recordTurn(invalid,crew.id,{attack:1}));assert.throws(()=>recordTurn(invalid,impostor.id,{attack:51}));
 });
 test('tie or skip produces no elimination',()=>{
   const tie=make();tie.votes={0:1,1:2,2:1,3:2};const r=voteResult(tie);assert.equal(r.tied,true);assert.equal(r.eliminated,null);assert.equal(livePlayers(tie).length,4);
@@ -57,7 +72,7 @@ test('impostor elimination wins; crew elimination excludes future participation'
   const crew=make();crew.votes={0:1,1:'skip',2:1,3:1};voteResult(crew);assert.equal(crew.winner,null);assert.equal(livePlayers(crew).length,3);assert.throws(()=>recordTurn(crew,1));nextRound(crew);play(crew);assert.equal(crew.battery,70);
 });
 test('final-round vote is allowed before survival wins',()=>{
-  const g=make();for(let i=0;i<3;i++){play(g,1,null);assert.equal(g.winner,null);skip(g);if(i<2)nextRound(g);}assert.equal(g.winner,'IMPOSTOR');
+  const g=make();for(let i=0;i<3;i++){play(g,1,0);assert.equal(g.winner,null);skip(g);if(i<2)nextRound(g);}assert.equal(g.winner,'IMPOSTOR');
   const caught=make();caught.round=3;caught.votes={0:'skip',1:0,2:0,3:0};voteResult(caught);assert.equal(caught.winner,'CREW');
 });
 test('incomplete rounds and votes are rejected',()=>{

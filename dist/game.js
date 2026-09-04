@@ -2,6 +2,7 @@ import {normalizeSettings,impostorCount} from './settings.js';
 import {adaptiveTable} from './learning.js';
 export const COLORS = ['#ffb95b','#76d5c3','#b49af4','#ff8794','#79bcf5','#d6e575','#f1a9e3','#dce6f0'];
 export const DEFAULT_NAMES = ['Kapten Oyen', 'Mochi', 'Boba', 'Luna'];
+export const SABOTAGE_MAX = 50;
 export function shuffled(items, rng = Math.random) {
   const out = [...items];
   for (let i=out.length-1; i>0; i--) { const j = Math.floor(rng()*(i+1)); [out[i],out[j]]=[out[j],out[i]]; }
@@ -30,26 +31,31 @@ export function anuQuestion(question,rng=Math.random){
 export function checkTaskAnswer(question,value){
   return value===question.answer;
 }
+export function sabotageReward(streak,activeImpostors=1){
+  const rewards=[0,5,8,12],step=Math.max(0,Math.min(3,Math.trunc(Number(streak)||0))),count=Math.max(1,Math.trunc(Number(activeImpostors)||1));
+  return Math.round(rewards[step]/count*10)/10;
+}
+export function chargeSabotage(stored,streak,activeImpostors=1){
+  const current=Math.max(0,Number(stored)||0);
+  return Math.min(SABOTAGE_MAX,Math.round((current+sabotageReward(streak,activeImpostors))*10)/10);
+}
 export function newGame(names,tables,rng=Math.random,settings={}) {
   const error=validateConfig(names,tables); if(error) throw new Error(error);
   const config=normalizeSettings(settings),spy=Math.floor(rng()*names.length),count=impostorCount(names.length,config.mode);
   const ids=[spy,...shuffled(names.map((_,i)=>i).filter(i=>i!==spy),rng).slice(0,count-1)];
-  return {config,tables:[...tables],players:names.map((n,i)=>({id:i,name:n.trim(),color:COLORS[i],role:ids.includes(i)?'IMPOSTOR':'CREW',alive:true,suspicion:0})),battery:config.startBattery,round:1,maxRounds:config.maxRounds,logs:[],records:[],turnResults:[],history:[],votes:{},winner:null,reason:null};
+  return {config,tables:[...tables],players:names.map((n,i)=>({id:i,name:n.trim(),color:COLORS[i],role:ids.includes(i)?'IMPOSTOR':'CREW',alive:true,suspicion:0,sabotageEnergy:0})),battery:config.startBattery,round:1,maxRounds:config.maxRounds,logs:[],records:[],turnResults:[],history:[],votes:{},winner:null,reason:null};
 }
 export function livePlayers(game) {return game.players.filter(p=>p.alive);}
 export function safeRound(game){return game.config.mode==='plus'&&game.round===1;}
 export function crisisActive(game){return game.config.mode==='plus'&&game.round>=2;}
-export function recordTurn(game,playerId,{correct=0,answered=0,success=null,table=null,intruder=null,hits=0,backfires=0}={}) {
+export function recordTurn(game,playerId,{correct=0,answered=0,attack=0}={}) {
   const p=game.players.find(p=>p.id===playerId);
   if(!p?.alive || game.turnResults.some(r=>r.playerId===playerId)) throw new Error('Giliran tidak sah atau telah direkodkan.');
   const crewCount=game.players.filter(p=>p.alive&&p.role==='CREW').length;
-  const impCount=livePlayers(game).filter(p=>p.role==='IMPOSTOR').length;
-  const sabotageHits=hits+backfires?hits:success===true?3:0;
-  const sabotageBackfires=hits+backfires?backfires:success===false?3:0;
   if(!Number.isInteger(correct)||correct<0||correct>3||!Number.isInteger(answered)||answered<0||answered>3||correct>answered)throw Error('Skor giliran tidak sah.');
-  if(!Number.isInteger(hits)||!Number.isInteger(backfires)||hits<0||backfires<0||hits+backfires>3)throw Error('Skor sabotaj tidak sah.');
-  const delta=p.role==='CREW' ? (correct*3+(correct===3?6:0))*3/crewCount : (-25*sabotageHits+5*sabotageBackfires)/(3*impCount);
-  game.turnResults.push({playerId,correct,answered,delta,success,table,intruder,hits:sabotageHits,backfires:sabotageBackfires});
+  if(!Number.isFinite(attack)||attack<0||attack>SABOTAGE_MAX||(p.role==='CREW'&&attack!==0))throw Error('Serangan sabotaj tidak sah.');
+  const delta=p.role==='CREW' ? (correct*3+(correct===3?6:0))*3/crewCount : -attack;
+  game.turnResults.push({playerId,correct,answered,attack,delta});
 }
 export function settleRound(game,rng=Math.random) {
   if(game.turnResults.length!==livePlayers(game).length) throw new Error('Semua pemain aktif mesti tamat giliran.');
@@ -59,15 +65,16 @@ export function settleRound(game,rng=Math.random) {
   const spies=game.turnResults.filter(t=>game.players.find(p=>p.id===t.playerId).role==='IMPOSTOR');
   const total=game.turnResults.reduce((s,t)=>s+t.correct,0), perfect=crew.filter(t=>t.correct===3).length;
   const totalQuestions=game.turnResults.length*3;
-  const interference=spies.reduce((s,t)=>s+t.hits,0),backfires=spies.reduce((s,t)=>s+t.backfires,0);
+  const attack=Math.round(spies.reduce((s,t)=>s+t.attack,0)*10)/10;
   const crisis=crisisActive(game)?(perfect>0?6:-8):0;
   const delta=game.turnResults.reduce((sum,t)=>sum+t.delta,0)+crisis;
   game.battery=Math.max(0,Math.min(100,Math.round((before+delta)*10)/10));
-  game.logs=shuffled([
+  const logs=[
     {kind:'info',text:`${total} daripada ${totalQuestions} soalan sifir dijawab tepat.`},
-    {kind:crisis<0?'warn':'good',text:crisis?crisis>0?`Krisis dibaiki! ${perfect} kombo sempurna. Bonus kapal +6%.`:'Krisis tidak dibaiki. Kapal kehilangan 8%.':`${perfect} modul menerima cas kombo sempurna.`},
-    interference?{kind:'warn',text:`${interference} gangguan tenaga dikesan; ${backfires} cubaan tersilap. Jejak stesen dirahsiakan.`}:backfires?{kind:'good',text:`${backfires} cubaan gangguan tersilap. Sistem memulihkan tenaga kapal.`}:{kind:'info',text:'Tiada gangguan tenaga berjaya dikesan pada pusingan ini.'}
-  ],rng);
+    {kind:crisis<0?'warn':'good',text:crisis?crisis>0?`Krisis dibaiki! ${perfect} kombo sempurna. Bonus kapal +6%.`:'Krisis tidak dibaiki. Kapal kehilangan 8%.':`${perfect} modul menerima cas kombo sempurna.`}
+  ];
+  if(attack>0)logs.push({kind:'warn',text:`Serangan sabotaj menelan ${attack.toLocaleString('ms-MY')}% tenaga kapal. Jejak stesen dirahsiakan.`});
+  game.logs=shuffled(logs,rng);
   game.history.push({round:game.round,before,after:game.battery,delta,crisis,correct:total,total:totalQuestions});
   if(game.battery>=100){game.winner='CREW';game.reason='Bateri kapal berjaya dicas hingga 100%.';}
   else if(game.battery<=0){game.winner='IMPOSTOR';game.reason='Bateri kapal telah habis.';}

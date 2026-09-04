@@ -1,4 +1,4 @@
-import {COLORS,DEFAULT_NAMES,validateConfig,newGame,livePlayers,crewQuestion,anuQuestion,recordTurn,settleRound,voteResult,nextRound,shuffled,voteCandidates,canVoteFor,castVote,safeRound,crisisActive,checkTaskAnswer} from './game.js';
+import {COLORS,DEFAULT_NAMES,SABOTAGE_MAX,validateConfig,newGame,livePlayers,crewQuestion,anuQuestion,recordTurn,settleRound,voteResult,nextRound,shuffled,voteCandidates,canVoteFor,castVote,safeRound,crisisActive,checkTaskAnswer,chargeSabotage} from './game.js';
 import {createAnswerInput,createActionGuard,deviceClass} from './input.js';
 import {avatarURLs,startStation} from './scene.js';
 import {normalizeSettings,impostorCount,toggleTable,loadRosters,saveRoster} from './settings.js';
@@ -29,7 +29,7 @@ const helpPages=[
   ['Tugasan rahsia','<p>Lalai <b>25 saat</b> setiap giliran. Masa boleh diubah atau dimatikan.</p><p>Semua pemain, termasuk penyamar, menjawab <b>3 soalan darab yang sama jenis</b> dengan menaip sendiri.</p><p>Jika <b>ANU</b> diaktifkan, satu soalan setiap giliran meminta faktor yang hilang, contohnya 7 × ? = 56.</p><p>Gunakan ⌫ untuk memadam dan ✓ untuk menghantar jawapan.</p>'],
   ['Bincang & undi','<p>Lalai <b>90 saat</b> untuk berbincang. Log tidak mendedahkan nama pelaku.</p><p>Setiap pemain aktif memilih pemain lain atau <b>Langkau</b>. Undi diri sendiri dilarang.</p><p>Undi seri atau Langkau terbanyak: tiada penyingkiran.</p><p>Pemain tersingkir menjadi pemerhati.</p>'],
   ['Mod Misi+','<p><b>7–8 pemain:</b> dua penyamar yang saling mengenali.</p><p><b>Pusingan 1 selamat:</b> undian hanya menanda syak, bukan menyingkir.</p><p><b>Krisis mulai pusingan 2:</b> sekurang-kurangnya satu kombo krew 3/3 memberi +6%. Jika tiada, bateri −8%.</p><p>Penyamar juga menang apabila bilangan mereka menyamai krew.</p>'],
-  ['Cas bateri','<p>Lalai bateri <b>50%</b>. Cas maksimum semua krew aktif ialah <b>+45%</b> setiap pusingan.</p><p>Jawapan betul krew: satu bahagian cas. Kombo 3/3: dua bahagian tambahan.</p><p>Tiga jawapan tepat penyamar memberi jumlah −25%; tiga jawapan salah memulihkan +5%. Nilai itu dibahagi adil antara semua penyamar aktif.</p><p>Perubahan dikira serentak di akhir pusingan.</p>'],
+  ['Tenaga sabotaj','<p>Lalai bateri <b>50%</b>. Cas maksimum semua krew aktif ialah <b>+45%</b> setiap pusingan.</p><p>Penyamar mengumpul tenaga untuk jawapan tepat: <b>+5%, +8%, +12%</b> mengikut streak. Dalam Misi+, nilai itu dibahagi antara dua penyamar aktif.</p><p>Selepas tiga soalan, penyamar boleh menyerang atau menyimpan tenaga sehingga <b>50%</b> untuk pusingan seterusnya.</p><p>Jika tiada serangan dibuat, log tidak memaparkan sebarang maklumat sabotaj.</p>'],
   ['Untuk guru','<p>Buka <b>⚙ Tetapan guru</b> dari lobi untuk mod, pemasa, soalan adaptif dan kumpulan tersimpan.</p><p><b>Laporan guru</b> muncul selepas misi tamat. Prestasi sifir semua murid, termasuk penyamar, direkodkan.</p><p>Aktifkan <b>ANU</b> bersama pilihan sifir untuk menguji kefahaman faktor hilang. Eksport CSV sebelum memuat semula atau memulakan misi baharu.</p>']
 ];
 function renderHelp(){const [title,body]=helpPages[helpPage];$('#help-title').textContent=title;$('#help-body').innerHTML=body;$('#help-page').textContent=`${helpPage+1} / ${helpPages.length}`;$('#help-prev').disabled=helpPage===0;$('#help-next').textContent=helpPage===helpPages.length-1?'Selesai':'Seterusnya';}
@@ -65,7 +65,7 @@ function settingToggle(key,label){return `<label class="setting-row"><span>${lab
 function renderSettings(){
   base('SETTINGS');header('Tetapan guru','',`${settingsPage+1} / 3`);
   let content='';
-  if(settingsPage===0)content=`<div class="mode-options"><button data-action="mode" data-mode="classic" aria-pressed="${settings.mode==='classic'}"><b>Klasik</b><span>1 penyamar · undian biasa</span></button><button data-action="mode" data-mode="plus" aria-pressed="${settings.mode==='plus'}"><b>Misi+</b><span>Krisis & pusingan selamat</span></button></div><p class="setting-note">${settings.mode==='plus'?'7–8 pemain: dua penyamar saling mengenali. Pusingan 1 hanya amaran; mulai pusingan 2, kombo 3/3 membaiki krisis.':'Seorang penyamar. Semua pemain menyelesaikan 3 tugasan rahsia setiap giliran.'}</p>${settingSelect('maxRounds','Pusingan',[2,3,4,5,6].map(n=>[n,String(n)]))}${settingSelect('startBattery','Bateri mula',[20,35,50,65,80].map(n=>[n,n+'%']))}`;
+  if(settingsPage===0)content=`<div class="mode-options"><button data-action="mode" data-mode="classic" aria-pressed="${settings.mode==='classic'}"><b>Klasik</b><span>1 penyamar · undian biasa</span></button><button data-action="mode" data-mode="plus" aria-pressed="${settings.mode==='plus'}"><b>Misi+</b><span>Krisis & pusingan selamat</span></button></div><p class="setting-note">${settings.mode==='plus'?'7–8 pemain: dua penyamar saling mengenali. Pusingan 1 hanya amaran; mulai pusingan 2, kombo 3/3 membaiki krisis.':'Seorang penyamar. Semua pemain menyelesaikan 3 tugasan rahsia setiap giliran.'}</p>${settingSelect('maxRounds','Pusingan',[2,3,4,5].map(n=>[n,String(n)]))}${settingSelect('startBattery','Bateri mula',[20,35,50,65,80].map(n=>[n,n+'%']))}`;
   if(settingsPage===1)content=`${settingSelect('turnDuration','Masa giliran',[10,15,20,25,30,45,60,90].map(n=>[n,n+' saat']))}${settingSelect('discussionDuration','Mesyuarat',[30,60,90,120,180,240].map(n=>[n,n+' saat']))}${settingToggle('adaptive','Soalan adaptif')}${settingToggle('timerOff','Tanpa pemasa')}<p class="setting-note">Semua soalan dijawab sendiri menggunakan papan nombor. Soalan adaptif memberi lebih latihan pada sifir yang kerap silap.</p>`;
   if(settingsPage===2)content=`${settingToggle('largeText','Teks lebih besar')}${settingToggle('reduceMotion','Kurangkan animasi')}<div class="roster-save"><input id="roster-name" aria-label="Nama kumpulan" placeholder="Nama kumpulan / kelas" maxlength="30"><button data-action="roster-save">Simpan</button></div><div class="roster-save"><select id="roster-select" aria-label="Kumpulan tersimpan"><option value="">Pilih kumpulan tersimpan</option>${loadRosters().map((r,i)=>`<option value="${i}">${escapeHTML(r.name)}</option>`).join('')}</select><button data-action="roster-load">Muat</button></div><p class="setting-note">Simpan 4–8 nama semasa. Laporan murid hanya tersedia selepas misi tamat dan boleh dieksport.</p>`;
   panel.innerHTML=`<section class="panel settings-panel"><div class="settings-content">${content}</div><p class="error" id="settings-message" role="status"></p><div class="page-controls"><button class="secondary" data-action="settings-prev" ${settingsPage===0?'disabled':''}>Kembali</button><button class="secondary" data-action="settings-next" ${settingsPage===2?'disabled':''}>Seterusnya</button></div><button class="primary" data-action="settings-done">Selesai · Kembali ke lobi</button></section>`;
@@ -81,10 +81,11 @@ function refreshLobby(){
   $('#station-title').textContent=`${settings.mode==='plus'?'MISI+':'KLASIK'} · ${impostorCount(names.length,settings.mode)} PENYAMAR`;
   $('#station-meta').textContent=`${names.length}/8 PEMAIN · ${tables.length} SIFIR${settings.anu?' + ANU':''}`;
   renderLobbyControls();validateLobby();syncRoster();persist();
-  station?.scene.setPlayerHandler(openPlayerEditor);
+  station?.scene.setPlayerHandler(lobbySheet?null:openPlayerEditor);
 }
 function renderLobbyControls(){
   const hud=$('#lobby-hud');hud.hidden=false;
+  stageShell.classList.toggle('sheet-open',!!lobbySheet);
   hud.innerHTML=`<div class="lobby-hud-actions"><button data-lobby-action="add" ${names.length>=8?'disabled':''} aria-label="Tambah pemain"><b>＋</b><span>Tambah pemain</span></button><button data-lobby-action="tables" aria-expanded="${lobbySheet==='tables'}"><b>×</b><span>Sifir</span><i>${tables.length}${settings.anu?'+A':''}</i></button></div><p>${names.length<8?'Tekan watak untuk ubah nama atau buang':'Pasukan lengkap · tekan watak untuk ubah nama'}</p>`;
   const sheet=$('#lobby-sheet');
   if(lobbySheet==='tables'){
@@ -92,6 +93,7 @@ function renderLobbyControls(){
   }else if(lobbySheet==='player'&&Number.isInteger(editingPlayerId)&&names[editingPlayerId]!==undefined){
     const id=editingPlayerId;sheet.hidden=false;sheet.innerHTML=`<div class="station-sheet-head player-edit-head">${avatar({id},'avatar-small')}<label><span>Nama pemain</span><input id="stage-player-name" maxlength="20" value="${escapeHTML(names[id])}" autocomplete="off" spellcheck="false"></label><button data-lobby-action="close" aria-label="Tutup suntingan nama">×</button></div><p id="stage-player-error" class="error" role="status"></p><div class="player-edit-actions">${names.length>4?'<button class="danger-button" data-lobby-action="remove">− Buang pemain</button>':''}<button class="primary" data-lobby-action="save">Simpan nama</button></div>`;
   }else sheet.hidden=true;
+  station?.scene.setPlayerHandler(lobbySheet?null:openPlayerEditor);
 }
 function validateLobby(){const error=validateConfig(names,tables);$('#lobby-error').textContent=error;$('#start-button').disabled=!!error;}
 function openPlayerEditor(id){if(screen!=='LOBBY'||!Number.isInteger(Number(id))||!names[Number(id)])return;editingPlayerId=Number(id);lobbySheet='player';renderLobbyControls();requestAnimationFrame(()=>{$('#stage-player-name')?.focus();$('#stage-player-name')?.select();});}
@@ -114,7 +116,7 @@ function renderRole(){
   b.addEventListener('keyup',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();hideRole();}});
   b.addEventListener('blur',hideRole);b.addEventListener('contextmenu',e=>e.preventDefault());
 }
-function showRole(){if(screen!=='ROLE')return;holding=true;hasSeenRole=true;const p=game.players[roleIndex],spy=p.role==='IMPOSTOR',partners=game.players.filter(x=>x.role==='IMPOSTOR'&&x.id!==p.id);$('#role-zone').className='role-zone revealed'+(spy?' spy':'');$('#role-zone').innerHTML=`<div><div class="role-title">${spy?'Kamu penyamar!':'Kamu krew angkasa!'}</div><p>${spy?'Jawab sifir seperti biasa. Setiap jawapan tepat melakukan sabotaj secara rahsia.':'Jawab sifir untuk mengecas kapal. Bincang dan kesan penyamar.'}${spy&&partners.length?`<br><b>Rakan penyamar: ${partners.map(x=>escapeHTML(x.name)).join(', ')}</b>`:''}</p></div>`;$('#role-next').disabled=true;}
+function showRole(){if(screen!=='ROLE')return;holding=true;hasSeenRole=true;const p=game.players[roleIndex],spy=p.role==='IMPOSTOR',partners=game.players.filter(x=>x.role==='IMPOSTOR'&&x.id!==p.id);$('#role-zone').className='role-zone revealed'+(spy?' spy':'');$('#role-zone').innerHTML=`<div><div class="role-title">${spy?'Kamu penyamar!':'Kamu krew angkasa!'}</div><p>${spy?'Jawab tepat untuk mengumpul tenaga. Selepas tugasan, serang sekarang atau simpan untuk pusingan seterusnya.':'Jawab sifir untuk mengecas kapal. Bincang dan kesan penyamar.'}${spy&&partners.length?`<br><b>Rakan penyamar: ${partners.map(x=>escapeHTML(x.name)).join(', ')}</b>`:''}</p></div>`;$('#role-next').disabled=true;}
 function hideRole(){holding=false;const z=$('#role-zone');if(z){z.className='role-zone';z.innerHTML='<div><div class="lock-icon">◇</div><p>Peranan kamu dikunci</p></div>';if($('#role-next'))$('#role-next').disabled=!hasSeenRole;}}
 function beginRound(){turnOrder=shuffled(livePlayers(game).map(p=>p.id));turnIndex=0;renderTransit();}
 function currentPlayer(){return game.players.find(p=>p.id===turnOrder[turnIndex]);}
@@ -123,7 +125,7 @@ function renderTransit(){
   panel.innerHTML=`<section class="panel private-card"><div class="eyebrow">Serahkan peranti · ${turnIndex+1}/${turnOrder.length}</div>${avatar(p)}<h2>${escapeHTML(p.name)}</h2><p>Hanya kamu boleh melihat skrin.<br><b>${game.config.timerOff?'Tanpa pemasa':game.config.turnDuration+' saat'}</b> untuk tugasan ini.${crisisActive(game)?'<br><span class="crisis-note">Krisis: krew perlu kombo 3/3.</span>':''}</p><button class="primary bottom-action" data-action="task-start">Saya sedia</button></section>`;
 }
 function startTask(){
-  base('TASK',{privateView:true});const p=currentPlayer();task={deadline:game.config.timerOff?Infinity:Date.now()+game.config.turnDuration*1000,question:null,step:0,anuStep:game.config.anu?Math.floor(Math.random()*3):-1,correct:0,answered:0,locked:false,done:false,success:null,lastTable:null,intruder:null,hits:0,backfires:0,recorded:false,typed:''};
+  base('TASK',{privateView:true});const p=currentPlayer(),spy=p.role==='IMPOSTOR';task={deadline:game.config.timerOff?Infinity:Date.now()+game.config.turnDuration*1000,question:null,step:0,anuStep:game.config.anu?Math.floor(Math.random()*3):-1,correct:0,answered:0,locked:false,done:false,streak:0,sabotageBank:spy?(p.sabotageEnergy||0):0,sabotageAttack:0,recorded:false,typed:''};
   header('Modul tenaga','',roundBadge());
   panel.innerHTML=`<section class="panel task-panel"><div class="task-header"><span>${avatar(p,'task-avatar')}${escapeHTML(p.name)}</span><span id="task-timer" class="timer-pill" role="timer">${game.config.timerOff?'∞':game.config.turnDuration+'s'}</span></div><div class="timer-track"><span id="time-fill"></span></div><div id="task-body"></div></section>`;
   drawQuestion();tickTask();if(!game.config.timerOff)clock=setInterval(tickTask,100);
@@ -155,8 +157,10 @@ function answer(value){
   if(screen!=='TASK'||task.locked||task.done)return;
   if(Date.now()>=task.deadline){finishTask();return;}
   task.locked=true;answerInput.cancel();task.answered++;const q=task.question,spy=currentPlayer().role==='IMPOSTOR',correct=checkTaskAnswer(q,value);logCurrentAnswer(value,correct);
-  if(correct)task.correct++;
-  if(spy){task.success=correct;task.lastTable=q.table;if(correct)task.hits++;else task.backfires++;}
+  if(correct){
+    task.correct++;
+    if(spy){task.streak++;const activeImpostors=livePlayers(game).filter(p=>p.role==='IMPOSTOR').length;task.sabotageBank=chargeSabotage(task.sabotageBank,task.streak,activeImpostors);}
+  }else if(spy)task.streak=0;
   panel.querySelectorAll('.answer').forEach(b=>{b.disabled=true;const n=Number(b.dataset.value);if(n===q.answer)b.classList.add('correct');else if(n===value)b.classList.add('wrong');});
   panel.querySelectorAll('.task-key').forEach(b=>b.disabled=true);
   if($('#typed-answer'))$('#typed-answer').className=correct?'is-correct':'is-wrong';
@@ -165,11 +169,19 @@ function answer(value){
   const token=epoch;
   setTimeout(()=>{if(token!==epoch||screen!=='TASK')return;task.step++;if(task.step===3){task.done=true;neutralTask();}else drawQuestion();},850);
 }
-function neutralTask(){$('#task-body').className='';$('#task-body').innerHTML='<div class="task-end-neutral"><div class="orbit-symbol">✦</div><h2>Tugasan selesai</h2><p>Semua jawapan telah disimpan.</p><button class="primary finish-turn" data-action="task-finish">Tamat giliran</button></div>';}
+function neutralTask(){
+  $('#task-body').className='';const spy=currentPlayer().role==='IMPOSTOR';
+  $('#task-body').innerHTML=spy?`<div class="task-end-neutral sabotage-console"><div class="eyebrow">Konsol rahsia penyamar</div><h2>${fmt(task.sabotageBank)}%</h2><div class="sabotage-meter" role="progressbar" aria-label="Tenaga sabotaj" aria-valuenow="${task.sabotageBank}" aria-valuemin="0" aria-valuemax="${SABOTAGE_MAX}"><i style="width:${task.sabotageBank/SABOTAGE_MAX*100}%"></i></div><p>Gunakan semua tenaga sekarang atau simpan hingga 50%.</p><button class="danger-button sabotage-button" data-action="task-sabotage" ${task.sabotageBank<=0?'disabled':''}>Sabotaj sekarang · −${fmt(task.sabotageBank)}%</button><button class="secondary finish-turn" data-action="task-finish">Simpan untuk pusingan seterusnya</button></div>`:'<div class="task-end-neutral"><div class="orbit-symbol">✦</div><h2>Tugasan selesai</h2><p>Semua jawapan telah disimpan.</p><button class="primary finish-turn" data-action="task-finish">Tamat giliran</button></div>';
+}
+function activateSabotage(){
+  if(screen!=='TASK'||!task?.done||currentPlayer().role!=='IMPOSTOR'||task.sabotageBank<=0)return;
+  task.sabotageAttack=task.sabotageBank;finishTask();
+}
 function finishTask(){
   if(screen!=='TASK')return;
   if(!task.done&&!task.recorded)logCurrentAnswer(null,false);
-  recordTurn(game,currentPlayer().id,{correct:task.correct,answered:task.answered,success:task.success,table:task.lastTable,intruder:task.intruder,hits:task.hits,backfires:task.backfires});
+  const p=currentPlayer();if(p.role==='IMPOSTOR')p.sabotageEnergy=task.sabotageAttack>0?0:task.sabotageBank;
+  recordTurn(game,p.id,{correct:task.correct,answered:task.answered,attack:task.sabotageAttack});
   task=null;base('TURN_END',{privateView:true});header('Giliran selesai','Rahsiakan apa yang kamu lihat.',roundBadge());
   panel.innerHTML=`<section class="panel private-card"><div class="orbit-symbol">✧</div><h2>Modul disimpan</h2><p>Paparan kini selamat untuk dikongsi.<br>${turnIndex+1<turnOrder.length?'Serahkan peranti kepada pemain seterusnya.':'Letakkan peranti di tengah untuk tatapan bersama.'}</p><div style="margin-top:30px"><button class="primary" data-action="turn-next">${turnIndex+1<turnOrder.length?'Pemain seterusnya':'Periksa keadaan kapal'}</button></div></section>`;
 }
@@ -278,6 +290,7 @@ panel.addEventListener('click',e=>{
     case 'start':startGame();break;
     case 'role-next':if(!hasSeenRole||holding)return;roleIndex++;if(roleIndex<game.players.length)renderRole();else beginRound();break;
     case 'task-start':startTask();break;
+    case 'task-sabotage':activateSabotage();break;
     case 'task-finish':if(task?.done)finishTask();break;
     case 'turn-next':turnIndex++;if(turnIndex<turnOrder.length)renderTransit();else{settleRound(game);renderCommand();}break;
     case 'meeting':renderMeeting();break;

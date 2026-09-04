@@ -4,7 +4,7 @@ export function normalizeSettings(value={}) {
   if(!value||typeof value!=='object')value={};
   const out={...DEFAULT_SETTINGS};
   out.mode=value.mode==='plus'?'plus':'classic';
-  for(const [key,min,max] of [['maxRounds',2,6],['turnDuration',10,90],['discussionDuration',30,240],['startBattery',20,80]]) {
+  for(const [key,min,max] of [['maxRounds',2,5],['turnDuration',10,90],['discussionDuration',30,240],['startBattery',20,80]]) {
     if(Number.isFinite(Number(value[key])))out[key]=Math.max(min,Math.min(max,Math.round(Number(value[key]))));
   }
   for(const key of ['adaptive','anu','timerOff','reduceMotion','largeText'])if(typeof value[key]==='boolean')out[key]=value[key];
