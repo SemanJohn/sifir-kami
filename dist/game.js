@@ -47,10 +47,12 @@ export function recordTurn(game,playerId,{correct=0,answered=0,success=null,tabl
   if(!p?.alive || game.turnResults.some(r=>r.playerId===playerId)) throw new Error('Giliran tidak sah atau telah direkodkan.');
   const crewCount=game.players.filter(p=>p.alive&&p.role==='CREW').length;
   const impCount=livePlayers(game).filter(p=>p.role==='IMPOSTOR').length;
+  const sabotageHits=hits+backfires?hits:success===true?3:0;
+  const sabotageBackfires=hits+backfires?backfires:success===false?3:0;
   if(!Number.isInteger(correct)||correct<0||correct>3||!Number.isInteger(answered)||answered<0||answered>3||correct>answered)throw Error('Skor giliran tidak sah.');
   if(!Number.isInteger(hits)||!Number.isInteger(backfires)||hits<0||backfires<0||hits+backfires>3)throw Error('Skor sabotaj tidak sah.');
-  const delta=p.role==='CREW' ? (correct*3+(correct===3?6:0))*3/crewCount : game.config.mode==='plus'?(-25*hits+5*backfires)/(3*impCount):success===true?-25:success===false?5:0;
-  game.turnResults.push({playerId,correct,answered,delta,success,table,intruder,hits,backfires});
+  const delta=p.role==='CREW' ? (correct*3+(correct===3?6:0))*3/crewCount : (-25*sabotageHits+5*sabotageBackfires)/(3*impCount);
+  game.turnResults.push({playerId,correct,answered,delta,success,table,intruder,hits:sabotageHits,backfires:sabotageBackfires});
 }
 export function settleRound(game,rng=Math.random) {
   if(game.turnResults.length!==livePlayers(game).length) throw new Error('Semua pemain aktif mesti tamat giliran.');

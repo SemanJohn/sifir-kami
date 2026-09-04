@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {newGame,livePlayers,recordTurn,settleRound,nextRound,castVote,voteResult,crewQuestion,checkTaskAnswer} from '../dist/game.js';
 import {normalizeSettings,impostorCount,loadRosters,saveRoster} from '../dist/settings.js';
 import {adaptiveTable,tableStatsFor,buildReport,toCsv} from '../dist/learning.js';
@@ -40,6 +41,17 @@ test('two impostors share total sabotage damage, including a neutral timeout',()
   const g=make(),spies=g.players.filter(p=>p.role==='IMPOSTOR');
   for(const p of g.players)recordTurn(g,p.id,p.id===spies[0].id?{hits:3}:{});
   settleRound(g);assert.equal(g.battery,37.5);
+});
+test('three typed sabotage attempts preserve Classic battery balance',()=>{
+  const g=make(4,{mode:'classic'}),spy=g.players.find(p=>p.role==='IMPOSTOR');
+  for(const p of g.players)recordTurn(g,p.id,p.id===spy.id?{hits:1,backfires:2,answered:3}:{correct:0,answered:0});
+  settleRound(g);assert.equal(g.battery,45);
+});
+test('task screen requires typed answers and offers immediate turn completion',()=>{
+  const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+  const draw=source.slice(source.indexOf('function drawQuestion'),source.indexOf('function tickTask'));
+  assert.match(draw,/q\.mode='keypad'/);assert.match(draw,/class="keypad"/);assert.doesNotMatch(draw,/class="answer-grid"/);
+  assert.match(source,/data-action="task-finish">Tamat giliran/);
 });
 test('Misi+ parity and configured final-round survival both end the game',()=>{
   const parity=make(7);parity.round=2;parity.players.filter(p=>p.role==='CREW').slice(0,3).forEach(p=>p.alive=false);skip(parity);assert.equal(parity.winner,'IMPOSTOR');

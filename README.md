@@ -8,23 +8,24 @@ Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/).
 
 1. Isi 4–8 nama berbeza pada langkah **Krew**, kemudian pilih sekurang-kurangnya dua sifir (1–12) pada langkah **Sifir** dan tekan **Mula misi**. Nama dipaparkan empat pada satu halaman.
 2. Ikut nama pada skrin. Tekan dan tahan untuk melihat peranan; lepaskan untuk menutupnya.
-3. Krew menjawab tiga soalan darab. Penyamar mencari nombor bukan gandaan (1 tugasan dalam Klasik, 3 dalam Misi+). Lalai satu giliran ialah 25 saat. Mulai pusingan 2, soalan kedua ditaip pada papan nombor; guru boleh mengubahnya.
+3. Setiap pemain menjawab tiga tugasan dengan menaip sendiri pada papan nombor. Krew mengira sifir; penyamar menaip nombor yang bukan gandaan. Selepas soalan ketiga, tekan **Tamat giliran** tanpa perlu menunggu baki masa.
 4. Bateri dan petunjuk tanpa nama dipaparkan selepas semua giliran. Bincang sehingga 90 saat, kemudian undi seorang demi seorang. Pemain hanya boleh memilih pemain aktif yang lain; undi diri sendiri tidak dibenarkan.
 5. Undi seri atau undi “Langkau” tertinggi menyebabkan tiada penyingkiran. Pemain yang disingkirkan menjadi pemerhati.
 
 Krew menang jika bateri mencapai 100% atau semua penyamar disingkirkan. Penyamar menang apabila bateri mencapai 0% atau kekal aktif selepas undian terakhir. Keputusan bateri didahulukan sebelum mesyuarat. Lalai 3 pusingan; guru boleh memilih 2–6.
 
-## Gabungan v1.1.0
+## Gabungan v1.1.1
 
 Gabungan ini mengadaptasi idea dan komponen daripada ZIP edisi Claude yang dibekalkan pengguna. Notis lesen asal dikekalkan dalam `CLAUDE-EDITION-LICENSE.md`.
 
 - **Dikekalkan daripada versi asal:** watak berwajah comel yang sama, latar stesen, Phaser 3.90.0, susun atur satu skrin, pengesahan sentuhan setiap soalan, larangan undi diri sendiri, dan bateri dikira pada akhir pusingan.
-- **Pembelajaran Claude:** soalan adaptif berasaskan kesilapan dalam misi semasa, pengalih perhatian bermakna, satu soalan taip setiap giliran dari pusingan dipilih, laporan murid/sifir dan eksport CSV.
+- **Pembelajaran Claude:** soalan adaptif berasaskan kesilapan dalam misi semasa, laporan murid/sifir, eksport CSV, maklum balas sentuhan ringan dan petunjuk ringkas selepas jawapan salah.
+- **Kaedah Sifir Juara:** semua tiga jawapan ditaip sendiri pada papan nombor terbina dalam; ⌫ memadam dan ✓ menghantar. Tiada pilihan jawapan untuk diteka.
 - **Tetapan guru:** buka ⚙ di lobi. Pilih mod, 2–6 pusingan, 10–90 saat giliran, 30–240 saat mesyuarat, bateri mula 20–80%, tanpa pemasa, teks besar, animasi berkurang dan simpan/muat kumpulan 4–8 murid.
 - **Misi+ pilihan:** dua penyamar untuk 7–8 pemain, pusingan pertama hanya amaran, krisis mulai pusingan 2. Satu kombo krew membaiki krisis (+6%); tiada kombo menyebabkan −8%. Penyamar juga menang apabila bilangannya menyamai krew.
 - **Privasi permainan:** log tidak menyenaraikan nama pelaku. Kesilapan matematik tidak terus membocorkan peranan. Rakan penyamar hanya didedahkan pada kad peranan rahsia.
 - **Laporan yang berbeza:** ketepatan sifir darab tidak dicampur dengan ketepatan mencari bukan gandaan. Soalan yang telah dilihat tetapi kehabisan masa direkod salah sekali; soalan yang belum pernah dipaparkan tidak direka sebagai jawapan salah. Data sedikit ditandai, bukan dilabel mahir.
-- **Paparan:** tetapan, sifir laporan dan murid dipaginasi. Papan nombor terbina dalam tidak memanggil papan kekunci telefon. Butang anak panah menukar halaman laporan; CSV menyimpan semua jawapan.
+- **Paparan:** tetapan, sifir laporan dan murid dipaginasi. Papan nombor terbina dalam tidak memanggil papan kekunci telefon. Skrin selesai menyediakan butang untuk menamatkan giliran awal; CSV menyimpan semua jawapan.
 
 Laporan hanya dalam memori: eksport sebelum main semula atau muat semula. Nama kumpulan dan tetapan disimpan setempat. Muat semula automatik hanya berlaku di lobi, bukan semasa misi atau membaca laporan. CSV melindungi nama yang menyerupai formula spreadsheet.
 
@@ -50,11 +51,11 @@ Laporan hanya dalam memori: eksport sebelum main semula atau muat semula. Nama k
 
 ### Bateri seimbang
 
-Bateri mula 50%. Jika terdapat `C` krew aktif, setiap jawapan betul menambah `9/C` peratus dan kombo tiga betul menambah `18/C` peratus. Tiga soalan dan kombo penuh memberikan `45/C` peratus kepada setiap krew. Sabotaj berjaya −25%; tersilap +5%; tamat masa tanpa menjawab 0%. Jumlah dikepit pada 0–100 dan dibundarkan satu tempat perpuluhan pada akhir pusingan.
+Bateri mula 50%. Jika terdapat `C` krew aktif, setiap jawapan betul menambah `9/C` peratus dan kombo tiga betul menambah `18/C` peratus. Tiga soalan dan kombo penuh memberikan `45/C` peratus kepada setiap krew. Tiga sabotaj berjaya memberi jumlah −25%; tiga cubaan tersilap memberi jumlah +5%; tamat masa tanpa menjawab adalah neutral. Jumlah dikepit pada 0–100 dan dibundarkan satu tempat perpuluhan pada akhir pusingan.
 
 Contoh 4 pemain: 3 krew × 15% = +45%. Dengan sabotaj berjaya, perubahan bersih ialah +20%, sama seperti pasukan 8 pemain apabila semua krew sempurna. Pelarasan ini ialah permulaan imbangan; keseronokan sebenar perlu dicuba dengan murid.
 
-Dalam Misi+, jumlah sabotaj sempurna semua penyamar kekal −25% sepusingan, dibahagi kepada `3 × bilangan penyamar aktif` tugasan. Semua cubaan tersilap memberikan +5% keseluruhan; tamat masa neutral. Bonus/penalti krisis dikira sekali sebelum bateri dikepit. Ini mengelakkan bilangan pemain dan turutan giliran mengubah imbangan asas.
+Dalam kedua-dua mod, jumlah sabotaj sempurna semua penyamar kekal −25% sepusingan, dibahagi kepada `3 × bilangan penyamar aktif` tugasan. Semua cubaan tersilap memberikan +5% keseluruhan; tamat masa neutral. Bonus/penalti krisis dikira sekali sebelum bateri dikepit. Ini mengelakkan bilangan pemain dan turutan giliran mengubah imbangan asas.
 
 ## Terbit melalui GitHub Pages
 
