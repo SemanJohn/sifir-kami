@@ -29,8 +29,10 @@ test('catching one of two impostors is not a win; catching both is',()=>{
 test('Misi+ battery normalization and crisis rewards are independent of roster size',()=>{
   for(let n=4;n<=8;n++){
     const g=make(n);play(g);assert.equal(g.battery,70);skip(g);nextRound(g);
-    play(g);assert.equal(g.battery,96);assert.equal(g.history[1].crisis,6);skip(g);nextRound(g);
-    play(g);assert.equal(g.battery,100);assert.equal(g.winner,'CREW');
+    // Krisis +6 masih dikira sebagai cas kapal, tetapi cas dihadkan pada 100
+    // sebelum serangan 25% menyusutkannya: 70 + 45 + 6 -> 100 -> 75.
+    play(g);assert.equal(g.battery,75);assert.equal(g.history[1].crisis,6);skip(g);nextRound(g);
+    play(g);assert.equal(g.battery,75);assert.equal(g.winner,null,'penyamar yang menyerang setiap pusingan menafikan cas penuh');
   }
 });
 test('failed crisis penalizes once; battery changes only after the full round',()=>{

@@ -54,10 +54,20 @@ test('impostors can deploy 10, 25 or all energy and retain the remainder',()=>{
 test('every game round has one shared space event with bounded time effects',()=>{
   for(let i=0;i<SPACE_EVENTS.length;i++){const g=newGame(names(4),[2,3],()=>i/SPACE_EVENTS.length);assert.ok(g.event);assert.ok(turnDurationFor(g)>=10);assert.ok(discussionDurationFor(g)>=15);}
 });
-test('3 through 8 players receive equal maximum round charge and complete three rounds',()=>{
+test('3 through 8 players charge equally, and the ship is capped before sabotage drains it',()=>{
   for(let n=3;n<=8;n++){
-    const g=make(n);play(g);assert.equal(g.battery,70);assert.equal(g.winner,null);skip(g);nextRound(g);
-    play(g);assert.equal(g.battery,90);skip(g);nextRound(g);play(g);assert.equal(g.battery,100);assert.equal(g.winner,'CREW');
+    // Tanpa sabotaj: +45 sepusingan, sama untuk semua saiz kumpulan.
+    const clean=make(n);play(clean,3,0);assert.equal(clean.battery,95);assert.equal(clean.winner,null);
+    skip(clean);nextRound(clean);play(clean,3,0);
+    assert.equal(clean.battery,100);assert.equal(clean.winner,'CREW');
+    // Dengan sabotaj penuh setiap pusingan: kapal dicas sehingga 100 dahulu,
+    // lebihan dibuang, kemudian serangan menyusut. Krew tidak boleh menyimpan
+    // cas berlebihan untuk menyerap sabotaj, jadi bateri mendatar.
+    const hit=make(n);play(hit);assert.equal(hit.battery,70);assert.equal(hit.winner,null);
+    skip(hit);nextRound(hit);play(hit);assert.equal(hit.battery,75);
+    skip(hit);nextRound(hit);play(hit);
+    assert.equal(hit.battery,75,'lebihan cas tidak boleh disimpan untuk menyerap sabotaj');
+    assert.equal(hit.winner,null);
   }
 });
 test('three-player Mini mode has a safe first vote and an impostor 1v1 victory',()=>{
@@ -215,4 +225,30 @@ test('the Boss is an energy bar to clear, and a turn reports the energy it gener
   assert.equal(resolveBoss(win,9,9),'CREW');assert.equal(win.bossResult.need,9);
   const loss=make();loss.round=3;skip(loss);assert.equal(resolveBoss(loss,8,9),'IMPOSTOR');
   assert.match(loss.reason,/8\/9/);
+});
+
+test('a sabotage attack always moves the battery, even when the crew overcharges',()=>{
+  // Kes sebenar yang dilaporkan: 3 pemain, bateri 65%, semua 9 soalan tepat.
+  // Cas krew +45 ke dalam ruang 35 sahaja, dan serangan 10% mendarat dalam
+  // lebihan itu. Sebelum ini bateri tetap 100% dan krew menang seolah-olah
+  // tiada serangan berlaku, walaupun log mendakwa 10% ditelan.
+  const round=attack=>{
+    const g=make(3);g.battery=65;g.round=2;
+    for(const p of livePlayers(g))recordTurn(g,p.id,p.role==='CREW'?{correct:3,answered:3}:{correct:3,answered:3,attack,earned:25});
+    settleRound(g);return g;
+  };
+  const hit=round(10),clean=round(0);
+  assert.equal(clean.battery,100);assert.equal(clean.winner,'CREW');
+  assert.equal(hit.battery,90,'serangan mesti menolak daripada 100%, bukan daripada lebihan yang dibuang');
+  assert.equal(hit.winner,null);
+  assert.notEqual(hit.battery,clean.battery,'serangan tidak boleh menghasilkan keputusan yang sama seperti tiada serangan');
+  // Log kini benar: 10% yang didakwa ditelan memang ditelan.
+  assert.equal(clean.battery-hit.battery,10);
+  // Setiap saiz serangan mesti meninggalkan kesan yang berkadar.
+  for(const a of [0.5,5,25,50])assert.equal(round(a).battery,Math.round((100-a)*10)/10,'serangan '+a+'%');
+  // Bateri tidak boleh jatuh di bawah sifar walaupun serangan melebihi cas.
+  const drained=make(3);drained.battery=5;drained.round=2;
+  for(const p of livePlayers(drained))recordTurn(drained,p.id,p.role==='CREW'?{correct:0,answered:3}:{correct:0,answered:3,attack:50,earned:0});
+  settleRound(drained);
+  assert.equal(drained.battery,0);assert.equal(drained.winner,'IMPOSTOR');
 });

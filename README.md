@@ -2,7 +2,55 @@
 
 Permainan web 2D berbahasa Melayu untuk 3–8 pemain sekolah rendah. Satu peranti diserahkan bergilir. Mod Mini mengaktifkan 2 krew dan 1 penyamar untuk tepat 3 pemain; mod Klasik mempunyai seorang penyamar, manakala Misi+ mempunyai dua penyamar apabila ada 7–8 pemain.
 
-Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v2.4.0**.
+Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v2.5.0**.
+
+## Sabotaj sentiasa memberi kesan v2.5.0
+
+Dilaporkan daripada permainan sebenar: pusingan 2, bateri 65%, semua 9 soalan dijawab tepat, penyamar menyerang 10% — bateri tetap mencecah 100% dan krew menang seolah-olah tiada serangan berlaku.
+
+Puncanya susunan operasi dalam `settleRound`: cas krew dan sabotaj **dicampur dahulu**, baru dihadkan pada 100%. Krew menghasilkan +45 mata ke dalam ruang 35 mata sahaja, jadi serangan 10% mendarat tepat di dalam lebihan yang memang akan dibuang. Dijalankan dengan kod sebenar: dengan serangan 10% bateri 100%, tanpa serangan langsung juga 100%.
+
+Ini sistemik. Dalam 20,000 misi 3–8 pemain:
+
+- **19.7%** daripada semua tenaga sabotaj ditelan siling 100%
+- **32.6%** pusingan kehilangan sebahagian serangan
+- **11.8%** pusingan — serangan **langsung tiada kesan**
+
+Log juga menipu: ia berkata "Serangan sabotaj menelan 10% tenaga kapal" sedangkan ia menelan sifar.
+
+**Peraturan baharu.** Kapal dicas dahulu dan **tidak boleh menyimpan lebih daripada 100%** — cas berlebihan hilang. Sabotaj kemudian menolak daripada nilai itu.
+
+```js
+const charge  = cas krew + krisis;
+const charged = Math.min(100, bateri + charge);   // lebihan dibuang
+bateri        = Math.max(0, charged - serangan);  // sabotaj sentiasa menggigit
+```
+
+Serangan yang tiada kesan jatuh **11.8% → 0%**, dan log kini benar.
+
+Kemenangan bateri krew tidak mati — ia jadi **bersyarat pada penyamar**:
+
+| Penyamar | Krew menang melalui bateri |
+|---|---|
+| Pandai sifir, serang setiap pusingan | 0.0% |
+| Sederhana, serang berkala | 17.8% |
+| Lemah sifir | 12.4% |
+| Tidak pernah menyerang | 60.6% |
+
+Kesan pada keseimbangan (20,000 misi/sel, menggunakan `dist/game.js` sebenar):
+
+| Pemain | Penyamar menang v2.4.0 | v2.5.0 |
+|---|---|---|
+| 3 | 22.5% | 27.1% |
+| 4 | 18.7% | 22.8% |
+| 5 | 19.4% | 25.9% |
+| 6 | 24.7% | 31.5% |
+| 7 | 16.4% | 33.1% |
+| 8 | 16.8% | 33.6% |
+
+Kenaikan terbesar pada 7–8 pemain berpunca daripada 51% misi yang dahulu berakhir dengan kemenangan bateri yang penyamar tidak dapat halang; kini misi itu sampai ke Boss Sifir. Undian pada saiz itu memang sudah hampir tidak menentukan (2.3% dalam v2.4.0), jadi perubahan ini tidak menjejaskannya.
+
+Satu log baharu ditambah apabila cas melimpah — *"Kapal mencapai cas penuh. Tenaga berlebihan tidak dapat disimpan."* — supaya bateri yang tidak kekal 100% tidak kelihatan seperti pepijat.
 
 ## Boss Sifir seimbang v2.4.0
 

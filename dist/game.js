@@ -128,13 +128,22 @@ export function settleRound(game,rng=Math.random) {
   const totalQuestions=game.turnResults.length*3;
   const attack=Math.round(spies.reduce((s,t)=>s+t.attack,0)*10)/10;
   const crisis=crisisActive(game)?(perfect>0?6:-8):0;
-  const delta=game.turnResults.reduce((sum,t)=>sum+t.delta,0)+crisis;
-  game.battery=Math.max(0,Math.min(100,Math.round((before+delta)*10)/10));
+  // Kapal dicas dahulu dan tidak boleh menyimpan lebih daripada 100%: cas
+  // berlebihan hilang. Barulah sabotaj menyusut daripada nilai itu. Jika
+  // dicampur dahulu seperti sebelum ini, serangan yang mendarat dalam lebihan
+  // krew tidak mengubah apa-apa walaupun log mendakwa ia menelan tenaga.
+  const charge=crew.reduce((sum,t)=>sum+t.delta,0)+crisis;
+  const charged=Math.min(100,Math.round((before+charge)*10)/10);
+  game.battery=Math.max(0,Math.round((charged-attack)*10)/10);
+  const delta=Math.round((game.battery-before)*10)/10;
   const logs=[
     {kind:'info',text:`${total} daripada ${totalQuestions} soalan sifir dijawab tepat.`},
     {kind:crisis<0?'warn':'good',text:crisis?crisis>0?`Krisis dibaiki! ${perfect} kombo sempurna. Bonus kapal +6%.`:'Krisis tidak dibaiki. Kapal kehilangan 8%.':`${perfect} modul menerima cas kombo sempurna.`}
   ];
   if(attack>0)logs.push({kind:'warn',text:`Serangan sabotaj menelan ${attack.toLocaleString('ms-MY')}% tenaga kapal. Jejak stesen dirahsiakan.`});
+  // Beritahu pasukan bila cas mereka melimpah, supaya bateri yang tidak kekal
+  // 100% selepas sabotaj tidak kelihatan seperti pepijat.
+  if(before+charge>100)logs.push({kind:'info',text:'Kapal mencapai cas penuh. Tenaga berlebihan tidak dapat disimpan.'});
   game.logs=shuffled(logs,rng);
   game.history.push({round:game.round,before,after:game.battery,delta,crisis,correct:total,total:totalQuestions});
   if(game.battery>=100){game.winner='CREW';game.reason='Bateri kapal berjaya dicas hingga 100%.';}
