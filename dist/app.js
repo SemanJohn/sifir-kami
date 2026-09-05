@@ -1,4 +1,4 @@
-import {COLORS,CHARACTER_STYLES,DEFAULT_NAMES,SABOTAGE_MAX,validateConfig,normalizeCharacterIds,newGame,livePlayers,crewQuestion,anuQuestion,recordTurn,settleRound,voteResult,nextRound,shuffled,voteCandidates,canVoteFor,castVote,safeRound,crisisActive,checkTaskAnswer,chargeSabotage,spendSabotage,turnDurationFor,discussionDurationFor,resolveBoss} from './game.js';
+import {COLORS,CHARACTER_STYLES,DEFAULT_NAMES,SABOTAGE_MAX,validateConfig,normalizeCharacterIds,newGame,livePlayers,crewQuestion,anuQuestion,recordTurn,settleRound,voteResult,nextRound,shuffled,voteCandidates,canVoteFor,castVote,safeRound,crisisActive,checkTaskAnswer,chargeSabotage,spendSabotage,turnDurationFor,discussionDurationFor,resolveBoss,bossEnergy,BOSS_SECONDS} from './game.js';
 import {createAnswerInput,createActionGuard,deviceClass} from './input.js';
 import {avatarURL,startStation} from './scene.js';
 import {normalizeSettings,impostorCount,toggleTable,loadRosters,saveRoster} from './settings.js';
@@ -37,7 +37,7 @@ const helpPages=[
   ['Bincang & undi','<p>Lalai <b>90 saat</b> untuk berbincang. Log tidak mendedahkan nama pelaku.</p><p>Setiap pemain aktif memilih pemain lain atau <b>Langkau</b>. Undi diri sendiri dilarang.</p><p>Undi seri atau Langkau terbanyak: tiada penyingkiran.</p><p>Pemain tersingkir menjadi pemerhati.</p>'],
   ['Mod Mini & Misi+','<p><b>3 pemain:</b> Mod Mini aktif secara automatik dengan 2 krew dan 1 penyamar. Pusingan pertama hanya menanda syak.</p><p>Mulai pusingan 2, jika krew tersingkir, penyamar menang kerana tinggal 1 lawan 1.</p><p><b>Misi+ 7–8 pemain:</b> dua penyamar saling mengenali. Krisis mulai pusingan 2; kombo krew 3/3 memberi +6%, jika tiada bateri −8%.</p>'],
   ['Tenaga sabotaj','<p>Lalai bateri <b>50%</b>. Cas maksimum semua krew aktif ialah <b>+45%</b> setiap pusingan.</p><p>Penyamar mengumpul tenaga untuk jawapan tepat: <b>+5%, +8%, +12%</b> mengikut streak.</p><p>Selepas tiga soalan, penyamar boleh menggunakan <b>10%, 25% atau semua tenaga</b>. Baki disimpan sehingga 50%.</p><p>Jika tiada serangan dibuat, log tidak memaparkan sebarang maklumat sabotaj.</p>'],
-  ['Peristiwa & Boss','<p>Setiap pusingan mempunyai satu peristiwa angkasa yang digunakan kepada semua pemain.</p><p>Jika penyamar masih hidup selepas undian terakhir, pasukan menghadapi <b>Boss Sifir</b>.</p><p>Jawab 3 soalan dalam 30 saat. Sekurang-kurangnya 2 jawapan tepat diperlukan untuk kemenangan krew.</p>'],
+  ['Peristiwa & Boss','<p>Setiap pusingan mempunyai satu peristiwa angkasa yang digunakan kepada semua pemain.</p><p>Jika penyamar masih hidup selepas undian terakhir, pasukan menghadapi <b>Boss Sifir</b>.</p><p>Boss mempunyai <b>tenaga 8 hingga 11</b>. Setiap jawapan tepat memadamkan satu tenaga; pasukan ada <b>30 saat</b>.</p><p>Boss menguat mengikut jumlah tenaga yang dikumpul penyamar sepanjang misi — jadi penyamar yang pandai sifir tetap berbahaya walaupun sudah membelanjakan semua serangannya.</p>'],
   ['Untuk guru','<p>Buka <b>⚙ Tetapan guru</b> dari lobi untuk mod, pemasa, soalan adaptif dan kumpulan tersimpan.</p><p>Sehingga <b>30 laporan misi</b> disimpan pada peranti dan boleh dieksport sebagai CSV gabungan.</p><p>Misi yang terganggu juga disimpan. Gunakan <b>Sambung misi</b> di lobi untuk kembali pada titik selamat.</p><p>Butang <b>🔊</b> di atas menghidupkan kesan bunyi dan muzik ringan. Muzik hanya bermain di lobi dan ketika mesyuarat, tidak semasa murid menjawab. Pilihan ini diingati pada peranti.</p>']
 ];
 function renderHelp(){const [title,body]=helpPages[helpPage];$('#help-title').textContent=title;$('#help-body').innerHTML=body;$('#help-page').textContent=`${helpPage+1} / ${helpPages.length}`;$('#help-prev').disabled=helpPage===0;$('#help-next').textContent=helpPage===helpPages.length-1?'Selesai':'Seterusnya';}
@@ -233,8 +233,11 @@ function activateSabotage(amount='all'){
 function finishTask(){
   if(screen!=='TASK')return;
   if(!task.done&&!task.recorded)logCurrentAnswer(null,false);
-  const p=currentPlayer();if(p.role==='IMPOSTOR')p.sabotageEnergy=Math.max(0,Math.round((task.sabotageBank-task.sabotageAttack)*10)/10);
-  recordTurn(game,p.id,{correct:task.correct,answered:task.answered,attack:task.sabotageAttack});
+  const p=currentPlayer(),spy=p.role==='IMPOSTOR';
+  if(spy)p.sabotageEnergy=Math.max(0,Math.round((task.sabotageBank-task.sabotageAttack)*10)/10);
+  // Tenaga yang dikumpul giliran ini menguatkan Boss, walaupun terus diserang.
+  const earned=spy?Math.max(0,Math.round((task.sabotageBank-(task.startSabotageEnergy||0))*10)/10):0;
+  recordTurn(game,p.id,{correct:task.correct,answered:task.answered,attack:task.sabotageAttack,earned});
   task=null;renderTurnEnd();
 }
 function renderTurnEnd(){
@@ -276,24 +279,30 @@ function renderVoteResult(){
 }
 function renderBossIntro(){
   base('BOSS_INTRO');header('Boss Sifir','',`Final · ${roundBadge()}`);
-  panel.innerHTML=`<section class="panel boss-panel boss-intro">${eventCard()}<div class="boss-orb">✹</div><h2>Pertahanan terakhir!</h2><p>Jawab 3 soalan bersama. Dapatkan sekurang-kurangnya <b>2 jawapan tepat</b> untuk menewaskan Boss Sifir. Penyamar masih boleh mengelirukan pasukan.</p><button class="primary bottom-action" data-action="boss-start">Mula Boss Sifir</button></section>`;
+  panel.innerHTML=`<section class="panel boss-panel boss-intro">${eventCard()}<div class="boss-orb">✹</div><h2>Pertahanan terakhir!</h2><p>Boss ini mempunyai <b>${bossEnergy(game)} tenaga</b>. Setiap jawapan tepat memadamkan satu. Padamkan semuanya dalam <b>${BOSS_SECONDS} saat</b> untuk menang.</p><p class="muted">Boss menguat mengikut jumlah tenaga yang dikumpul penyamar sepanjang misi.</p><button class="primary bottom-action" data-action="boss-start">Mula Boss Sifir</button></section>`;
 }
-function startBoss(){bossTask={step:0,correct:0,typed:'',locked:false,deadline:Date.now()+30000,question:null};base('BOSS');header('Boss Sifir','',`0 / 3`);drawBossQuestion();clock=setInterval(tickBoss,100);}
+function startBoss(){const need=bossEnergy(game);bossTask={need,step:0,correct:0,typed:'',locked:false,deadline:Date.now()+BOSS_SECONDS*1000,question:null};base('BOSS');header('Boss Sifir','',`0 / ${need}`);drawBossQuestion();clock=setInterval(tickBoss,100);}
 function drawBossQuestion(){
   bossTask.question=crewQuestion(game.tables);bossTask.typed='';bossTask.locked=false;questionId++;answerInput.reset(questionId);const q=bossTask.question;
-  header('Boss Sifir','',`${bossTask.step+1} / 3`);
-  panel.innerHTML=`<section class="panel task-panel boss-panel"><div class="boss-status"><span>✹ Tenaga Boss</span><b id="boss-timer">${Math.max(0,Math.ceil((bossTask.deadline-Date.now())/1000))}s</b></div><div class="boss-health"><i style="width:${(3-bossTask.step)/3*100}%"></i></div><div id="task-body" class="keypad-mode"><div class="task-kicker">Soalan pasukan ${bossTask.step+1} / 3 · Perlu 2 betul</div><div class="typed-question"><div class="math-prompt">${q.table} × ${q.multiplier} =</div><output id="typed-answer">?</output></div><div class="keypad">${['1','2','3','4','5','6','7','8','9','⌫','0','✓'].map(k=>`<button class="boss-key ${k==='⌫'?'key-delete':k==='✓'?'key-submit':''}" data-action="boss-key" data-question="${questionId}" data-value="${k}">${k}</button>`).join('')}</div><div class="feedback" role="status"></div></div></section>`;
+  header('Boss Sifir','',`${bossTask.correct} / ${bossTask.need}`);
+  panel.innerHTML=`<section class="panel task-panel boss-panel"><div class="boss-status"><span>✹ Tenaga Boss</span><b id="boss-timer">${Math.max(0,Math.ceil((bossTask.deadline-Date.now())/1000))}s</b></div><div class="boss-health"><i style="width:${Math.max(0,(bossTask.need-bossTask.correct)/bossTask.need*100)}%"></i></div><div id="task-body" class="keypad-mode"><div class="task-kicker">Tenaga Boss ${Math.max(0,bossTask.need-bossTask.correct)} · Soalan ${bossTask.step+1}</div><div class="typed-question"><div class="math-prompt">${q.table} × ${q.multiplier} =</div><output id="typed-answer">?</output></div><div class="keypad">${['1','2','3','4','5','6','7','8','9','⌫','0','✓'].map(k=>`<button class="boss-key ${k==='⌫'?'key-delete':k==='✓'?'key-submit':''}" data-action="boss-key" data-question="${questionId}" data-value="${k}">${k}</button>`).join('')}</div><div class="feedback" role="status"></div></div></section>`;
   checkpoint();
 }
 function enterBossDigit(key){if(screen!=='BOSS'||bossTask.locked)return;if(key==='✓'){if(bossTask.typed!=='')answerBoss(Number(bossTask.typed));return;}if(key==='⌫')bossTask.typed=bossTask.typed.slice(0,-1);else if(/^\d$/.test(key)&&bossTask.typed.length<3)bossTask.typed+=key;$('#typed-answer').textContent=bossTask.typed||'?';}
+// Giliran biasa menahan 850ms supaya murid sempat membaca jawapan betul. Boss
+// pula pecutan bermasa: jeda panjang memakan seperempat daripada masa pasukan.
+const BOSS_FEEDBACK_MS=250;
 function answerBoss(value){
   if(screen!=='BOSS'||!bossTask||bossTask.locked)return;if(Date.now()>=bossTask.deadline){finishBoss();return;}bossTask.locked=true;answerInput.cancel();const correct=value===bossTask.question.answer;if(correct)bossTask.correct++;
   panel.querySelectorAll('.boss-key').forEach(button=>button.disabled=true);$('#typed-answer').className=correct?'is-correct':'is-wrong';$('.feedback').innerHTML=correct?'<b>✓ Tepat! Serangan berjaya.</b>':`Jawapannya <b>${bossTask.question.answer}</b>.`;
   panel.querySelector('.task-panel')?.classList.add(correct?'answer-correct':'answer-wrong');sound(correct?'correct':'wrong');checkpoint();const token=epoch;
-  setTimeout(()=>{if(token!==epoch||screen!=='BOSS')return;bossTask.step++;if(bossTask.step>=3)finishBoss();else drawBossQuestion();},800);
+  setTimeout(()=>{
+    if(token!==epoch||screen!=='BOSS')return;bossTask.step++;
+    if(bossTask.correct>=bossTask.need||Date.now()>=bossTask.deadline)finishBoss();else drawBossQuestion();
+  },BOSS_FEEDBACK_MS);
 }
 function tickBoss(){if(screen!=='BOSS'||!bossTask)return;const left=Math.max(0,bossTask.deadline-Date.now());$('#boss-timer').textContent=`${Math.ceil(left/1000)}s`;if(left<=0)finishBoss();}
-function finishBoss(){if(screen!=='BOSS'||!bossTask)return;stopClock();const correct=bossTask.correct;resolveBoss(game,correct,3);bossTask=null;renderGameOver();}
+function finishBoss(){if(screen!=='BOSS'||!bossTask)return;stopClock();resolveBoss(game,bossTask.correct,bossTask.need);bossTask=null;renderGameOver();}
 function renderGameOver(){
   base('GAME_OVER');const crew=game.winner==='CREW',spies=game.players.filter(p=>p.role==='IMPOSTOR');
   const total=game.records.length,correct=game.records.filter(r=>r.correct).length;

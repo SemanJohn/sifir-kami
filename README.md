@@ -2,7 +2,38 @@
 
 Permainan web 2D berbahasa Melayu untuk 3–8 pemain sekolah rendah. Satu peranti diserahkan bergilir. Mod Mini mengaktifkan 2 krew dan 1 penyamar untuk tepat 3 pemain; mod Klasik mempunyai seorang penyamar, manakala Misi+ mempunyai dua penyamar apabila ada 7–8 pemain.
 
-Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v2.3.0**.
+Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v2.4.0**.
+
+## Boss Sifir seimbang v2.4.0
+
+Boss lama ialah formaliti: 3 soalan, perlu 2 betul, dijawab beramai-ramai pada satu skrin. Simulasi 20,000 misi setiap sel — menggunakan `dist/game.js` yang sebenar — menunjukkan penyamar hampir mustahil menang dalam kumpulan besar.
+
+| Pemain | Penyamar menang (lama) | Penyamar menang (v2.4.0) | Misi tamat di Boss |
+|---|---|---|---|
+| 3 | 20.7% | 22.5% | 2.8% |
+| 4 | 16.2% | 18.7% | 3.5% |
+| 5 | 8.0% | 19.4% | 14.5% |
+| 6 | **1.2%** | 24.7% | 29.5% |
+| 7 | **1.8%** | 16.4% | 46.5% |
+| 8 | **1.8%** | 16.8% | 47.2% |
+
+Sebabnya struktur: dengan 6 pemain atau lebih, penyamar tidak boleh menang melalui bateri (krew mengecas +45%/pusingan lawan serangan maksimum −25%) dan tidak boleh menyamai krew dalam 3 pusingan. Boss ialah satu-satunya jalan yang tinggal — dan hampir separuh misi 7–8 pemain memang berakhir di situ.
+
+**Peraturan baharu.** Boss mempunyai **bar tenaga 8 hingga 11**. Setiap jawapan tepat memadamkan satu tenaga; pasukan ada 30 saat.
+
+```
+Tenaga Boss = 8 + (jumlah tenaga yang penyamar KUMPUL sepanjang misi)
+                  ÷ (25 × bilangan penyamar)                    had 11
+```
+
+- Dikira daripada tenaga yang **dikumpul**, bukan baki yang tinggal. Penyamar yang membelanjakan semuanya untuk menyerang bateri tetap mendapat Boss yang kuat — kadar kemenangan mereka naik 6.8% → 16.9%.
+- Dibahagi bilangan penyamar, sama seperti `sabotageReward`, supaya Misi+ dengan dua penyamar tidak melampau.
+- Penyamar mengumpul tenaga dengan **menjawab sifir dengan tepat**, jadi penyamar yang lemah sifir mendapat Boss lemah dan patut kalah.
+- Jeda maklum balas Boss dipendekkan 800 ms → **250 ms**. Diukur dalam pelayar: jeda lama hanya membenarkan 8 soalan dalam 30 saat, jadi sasaran 8–11 mustahil dicapai tanpa perubahan ini.
+
+Julat kadar kemenangan antara saiz kumpulan mengecil daripada **19.5 mata kepada 8.3 mata** — permainan kini konsisten sama ada 3 atau 8 murid.
+
+**Batasan yang perlu diketahui:** simulasi memodelkan keupayaan murid mengesan penyamar sebagai satu nombor (`detection`). Nombor itu menguasai keputusan — pada 0.10 penyamar menang 24.7%, pada 0.55 hanya 1.5% — dan ia tidak boleh diukur tanpa data kelas sebenar. Perbandingan antara formula adalah sah; kadar mutlak bukan janji.
 
 ## Bunyi & muzik v2.3.0
 

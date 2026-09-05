@@ -26,6 +26,17 @@ export const COLORS = CHARACTER_STYLES.map(style=>style.body);
 export const CHARACTER_COUNT = CHARACTER_STYLES.length;
 export const DEFAULT_NAMES = ['Kapten Oyen', 'Mochi', 'Boba', 'Luna'];
 export const SABOTAGE_MAX = 50;
+// Boss Sifir ialah satu-satunya jalan menang yang tinggal untuk penyamar dalam
+// kumpulan besar, jadi kekuatannya mesti datang daripada usaha mereka sendiri.
+// Tenaga dikira daripada jumlah yang DIKUMPUL sepanjang misi, bukan baki yang
+// tinggal, supaya penyamar yang membelanjakan semuanya untuk menyerang bateri
+// tidak dihukum di penghujung. Dibahagi bilangan penyamar seperti sabotageReward.
+export const BOSS_BASE = 8, BOSS_MAX = 11, BOSS_SECONDS = 30;
+export function bossEnergy(game){
+  const spies=Math.max(1,game.players.filter(p=>p.role==='IMPOSTOR').length);
+  const earned=Math.max(0,Number(game.sabotageEarned)||0);
+  return Math.max(BOSS_BASE,Math.min(BOSS_MAX,Math.round(BOSS_BASE+earned/(25*spies))));
+}
 export const SPACE_EVENTS = [
   {id:'LOW_GRAVITY',icon:'◌',name:'Graviti Rendah',description:'Semua pemain mendapat tambahan 5 saat.',turnBonus:5},
   {id:'METEOR',icon:'✦',name:'Hujan Meteor',description:'Kombo tepat menghasilkan kesan bintang berganda.'},
@@ -90,20 +101,22 @@ export function newGame(names,tables,rng=Math.random,settings={},characterIds=[]
   const error=validateConfig(names,tables); if(error) throw new Error(error);
   const config=normalizeSettings(settings),characters=normalizeCharacterIds(characterIds,names.length),spy=Math.floor(rng()*names.length),count=impostorCount(names.length,config.mode);
   const ids=[spy,...shuffled(names.map((_,i)=>i).filter(i=>i!==spy),rng).slice(0,count-1)];
-  return {sessionId:missionId(),startedAt:Date.now(),config,tables:[...tables],players:names.map((n,i)=>({id:i,name:n.trim(),characterId:characters[i],color:COLORS[characters[i]],role:ids.includes(i)?'IMPOSTOR':'CREW',alive:true,suspicion:0,sabotageEnergy:0})),battery:config.startBattery,round:1,maxRounds:config.maxRounds,event:chooseSpaceEvent(rng),logs:[],records:[],turnResults:[],history:[],votes:{},bossPending:false,winner:null,reason:null};
+  return {sessionId:missionId(),startedAt:Date.now(),config,tables:[...tables],players:names.map((n,i)=>({id:i,name:n.trim(),characterId:characters[i],color:COLORS[characters[i]],role:ids.includes(i)?'IMPOSTOR':'CREW',alive:true,suspicion:0,sabotageEnergy:0})),battery:config.startBattery,round:1,maxRounds:config.maxRounds,event:chooseSpaceEvent(rng),logs:[],records:[],turnResults:[],history:[],votes:{},sabotageEarned:0,bossPending:false,winner:null,reason:null};
 }
 export function livePlayers(game) {return game.players.filter(p=>p.alive);}
 export function miniGame(game){return game.players.length===3;}
 export function safeRound(game){return (miniGame(game)||game.config.mode==='plus')&&game.round===1;}
 export function crisisActive(game){return !miniGame(game)&&game.config.mode==='plus'&&game.round>=2;}
-export function recordTurn(game,playerId,{correct=0,answered=0,attack=0}={}) {
+export function recordTurn(game,playerId,{correct=0,answered=0,attack=0,earned=0}={}) {
   const p=game.players.find(p=>p.id===playerId);
   if(!p?.alive || game.turnResults.some(r=>r.playerId===playerId)) throw new Error('Giliran tidak sah atau telah direkodkan.');
   const crewCount=game.players.filter(p=>p.alive&&p.role==='CREW').length;
   if(!Number.isInteger(correct)||correct<0||correct>3||!Number.isInteger(answered)||answered<0||answered>3||correct>answered)throw Error('Skor giliran tidak sah.');
   if(!Number.isFinite(attack)||attack<0||attack>SABOTAGE_MAX||(p.role==='CREW'&&attack!==0))throw Error('Serangan sabotaj tidak sah.');
+  if(!Number.isFinite(earned)||earned<0||earned>SABOTAGE_MAX||(p.role==='CREW'&&earned!==0))throw Error('Tenaga sabotaj dikumpul tidak sah.');
   const delta=p.role==='CREW' ? (correct*3+(correct===3?6:0))*3/crewCount : -attack;
-  game.turnResults.push({playerId,correct,answered,attack,delta});
+  game.sabotageEarned=Math.round(((game.sabotageEarned||0)+earned)*10)/10;
+  game.turnResults.push({playerId,correct,answered,attack,earned,delta});
 }
 export function settleRound(game,rng=Math.random) {
   if(game.turnResults.length!==livePlayers(game).length) throw new Error('Semua pemain aktif mesti tamat giliran.');
@@ -162,12 +175,13 @@ export function voteResult(game) {
   else if(game.round>=game.maxRounds){game.bossPending=true;}
   return {eliminated,warned,safe:safeRound(game),counts,tied:leaders.length>1};
 }
-export function resolveBoss(game,correct,total=3){
+export function resolveBoss(game,correct,need=bossEnergy(game)){
   if(!game.bossPending||game.winner)throw Error('Boss Sifir tidak aktif.');
-  const score=Math.max(0,Math.min(total,Math.trunc(Number(correct)||0)));
-  game.bossPending=false;game.bossResult={correct:score,total};
-  if(score>=Math.ceil(total*2/3)){game.winner='CREW';game.reason=`Pasukan menewaskan Boss Sifir dengan ${score}/${total} jawapan tepat.`;}
-  else{game.winner='IMPOSTOR';game.reason=`Penyamar bertahan selepas Boss Sifir. Pasukan hanya mendapat ${score}/${total}.`;}
+  const target=Math.max(1,Math.trunc(Number(need)||BOSS_BASE));
+  const score=Math.max(0,Math.trunc(Number(correct)||0));
+  game.bossPending=false;game.bossResult={correct:score,need:target};
+  if(score>=target){game.winner='CREW';game.reason=`Tenaga Boss Sifir dipadamkan dengan ${score}/${target} jawapan tepat.`;}
+  else{game.winner='IMPOSTOR';game.reason=`Boss Sifir bertahan. Pasukan hanya mendapat ${score}/${target} jawapan tepat.`;}
   return game.winner;
 }
 export function nextRound(game,rng=Math.random) {
