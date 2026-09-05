@@ -1,7 +1,7 @@
 const PREFIX='sifir-kami:'+self.registration.scope+':';
-const CACHE=PREFIX+'2.2.0';
+const CACHE=PREFIX+'2.3.0';
 const STATION_HASH='80fbae688bb9b7c3bf119cb92bda8f06530baab5f72c8ca0ee276b228685fa42';
-const FILES=['./','./index.html','./style.css','./merge.css','./app.js','./game.js','./input.js','./settings.js','./learning.js','./session.js','./scene.js','./manifest.webmanifest','./vendor/phaser.min.js','./assets/station.webp','./assets/icon-180.png','./assets/icon-192.png','./assets/icon-512.png','./assets/icon-maskable-512.png','./assets/fonts/baloo2-700.woff2','./assets/fonts/baloo2-800.woff2','./assets/fonts/dmsans-400.woff2','./assets/fonts/dmsans-700.woff2'];
+const FILES=['./','./index.html','./style.css','./merge.css','./app.js','./game.js','./input.js','./settings.js','./learning.js','./session.js','./scene.js','./audio.js','./manifest.webmanifest','./vendor/phaser.min.js','./assets/station.webp','./assets/icon-180.png','./assets/icon-192.png','./assets/icon-512.png','./assets/icon-maskable-512.png','./assets/fonts/baloo2-700.woff2','./assets/fonts/baloo2-800.woff2','./assets/fonts/dmsans-400.woff2','./assets/fonts/dmsans-700.woff2'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);
   try{

@@ -4,6 +4,7 @@ import {readFileSync,existsSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {runInNewContext} from 'node:vm';
 import {stationSlots,rosterSignature} from '../dist/input.js';
+import {SFX,MUSIC,musicForScreen,silentWavBytes} from '../dist/audio.js';
 
 const expected={
   "dist/assets/fonts/BALOO2-LICENSE.txt": "273d4bb4d30d7f7011adfa11ee858b1d70a6b1f94cae89e6fa261ed8f1b8839a",
@@ -78,9 +79,9 @@ const slice=(source,from,to)=>source.slice(source.indexOf(from),source.indexOf(t
 
 test('number keys reach the keypad even when no keypad button has focus',()=>{
   const code=slice(appSource(),'function handleTypedKey',"document.addEventListener('keydown',handleTypedKey)");
-  const typed=[],boss=[];
+  const typed=[],boss=[],clicks=[];
   const run=(screen,event,curtain=null,dialog=null)=>{
-    const ctx={screen,enterDigit:key=>typed.push(key),enterBossDigit:key=>boss.push(key),
+    const ctx={screen,enterDigit:key=>typed.push(key),enterBossDigit:key=>boss.push(key),sound:()=>clicks.push(1),
       $:selector=>selector==='.safety-curtain'?curtain:selector==='dialog[open]'?dialog:null,event};
     runInNewContext(code+';handleTypedKey(event)',ctx);
   };
@@ -99,6 +100,8 @@ test('number keys reach the keypad even when no keypad button has focus',()=>{
   run('TASK',press('5',{ctrlKey:true}));
   run('TASK',press('a'));
   assert.deepEqual(typed,['7','⌫','✓']);
+  // Typing must click like the on-screen keypad, and only for keys it accepts.
+  assert.equal(clicks.length,4);
 });
 test('the turn clock stops once all three questions are answered',()=>{
   const source=appSource();
@@ -152,4 +155,40 @@ test('a hidden station sleeps before the next frame, never handing Phaser a 0x0 
   assert.deepEqual(calls,['stop','sleep']);assert.equal(frames.length,1);
   frames[0]();
   assert.deepEqual(calls,['stop','sleep','start','wake','refresh']);
+});
+test('every generated sound is audible without clipping, and music stays quieter',()=>{
+  for(const [name,notes] of Object.entries(SFX)){
+    assert.ok(notes.length>0,name+' has no notes');
+    for(const n of notes){
+      // The v2.1.1 blip peaked at 0.035 (-29 dBFS) and was inaudible on a phone.
+      assert.ok(n.peak>=.12&&n.peak<=.35,`${name} peak ${n.peak} is not classroom-audible`);
+      assert.ok(n.dur>0&&n.dur<=1,`${name} duration ${n.dur}`);
+      assert.ok(n.from>=20&&n.from<=4000,`${name} pitch ${n.from}`);
+      if(n.to!==undefined&&n.to!==null)assert.ok(n.to>=20&&n.to<=4000,`${name} glide target ${n.to}`);
+    }
+  }
+  for(const [name,conf] of Object.entries(MUSIC)){
+    assert.ok(conf.peak>0&&conf.peak<.09,`${name} music must sit under the effects`);
+    assert.ok(conf.beat>.2&&conf.beat<2,`${name} beat ${conf.beat}`);
+    assert.ok(conf.steps.length>=4&&conf.steps.every(Number.isInteger),name+' needs a usable phrase');
+    for(const semitone of conf.steps){const hz=conf.base*Math.pow(2,semitone/12);assert.ok(hz>60&&hz<2000,`${name} note ${hz}Hz`);}
+  }
+});
+test('music plays only where players talk, never while answering or passing the device',()=>{
+  assert.equal(musicForScreen('LOBBY'),'lobby');
+  assert.equal(musicForScreen('MEETING'),'meeting');
+  for(const screen of ['ROLE','TRANSIT','TASK','TURN_END','VOTE_TRANSIT','VOTE','VOTE_SAVED','VOTE_RESULT','COMMAND','BOSS_INTRO','BOSS','GAME_OVER','REPORT','HISTORY','SETTINGS'])
+    assert.equal(musicForScreen(screen),null,screen+' must stay silent');
+  for(const theme of Object.values(['lobby','meeting']))assert.ok(MUSIC[theme],'named theme must exist');
+});
+test('the iOS keep-alive track is a valid, genuinely silent WAV',()=>{
+  const bytes=silentWavBytes(1),view=new DataView(bytes.buffer);
+  const text=(at,len)=>String.fromCharCode(...bytes.slice(at,at+len));
+  assert.equal(text(0,4),'RIFF');assert.equal(text(8,4),'WAVE');assert.equal(text(12,4),'fmt ');assert.equal(text(36,4),'data');
+  assert.equal(view.getUint32(4,true)+8,bytes.length,'RIFF length must match the whole buffer');
+  assert.equal(view.getUint32(40,true),bytes.length-44,'data chunk must match the sample bytes');
+  assert.equal(view.getUint16(22,true),1);assert.equal(view.getUint32(24,true),8000);assert.equal(view.getUint16(34,true),16);
+  assert.ok(bytes.slice(44).every(b=>b===0),'the keep-alive track must be truly silent');
+  assert.equal(silentWavBytes(.25).length,44+2000*2);
+  assert.ok(silentWavBytes(0).length>=46,'a zero request still yields a playable frame');
 });
