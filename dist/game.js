@@ -26,12 +26,19 @@ export const COLORS = CHARACTER_STYLES.map(style=>style.body);
 export const CHARACTER_COUNT = CHARACTER_STYLES.length;
 export const DEFAULT_NAMES = ['Kapten Oyen', 'Mochi', 'Boba', 'Luna'];
 export const SABOTAGE_MAX = 50;
+export const SPACE_EVENTS = [
+  {id:'LOW_GRAVITY',icon:'◌',name:'Graviti Rendah',description:'Semua pemain mendapat tambahan 5 saat.',turnBonus:5},
+  {id:'METEOR',icon:'✦',name:'Hujan Meteor',description:'Kombo tepat menghasilkan kesan bintang berganda.'},
+  {id:'AURORA',icon:'≋',name:'Aurora Tenaga',description:'Tolok dan stesen bersinar sepanjang pusingan.'},
+  {id:'ECLIPSE',icon:'◐',name:'Gerhana Pantas',description:'Mesyuarat dipendekkan 15 saat.',discussionDelta:-15}
+];
 export function shuffled(items, rng = Math.random) {
   const out = [...items];
   for (let i=out.length-1; i>0; i--) { const j = Math.floor(rng()*(i+1)); [out[i],out[j]]=[out[j],out[i]]; }
   return out;
 }
 export function randomItem(items, rng = Math.random) { return items[Math.floor(rng()*items.length)]; }
+function missionId(){return globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.floor(Math.random()*1e9)}`;}
 export function normalizeCharacterIds(ids,count){
   const used=new Set(),values=Array.isArray(ids)?ids:[];
   return Array.from({length:count},(_,index)=>{
@@ -71,11 +78,19 @@ export function chargeSabotage(stored,streak,activeImpostors=1){
   const current=Math.max(0,Number(stored)||0);
   return Math.min(SABOTAGE_MAX,Math.round((current+sabotageReward(streak,activeImpostors))*10)/10);
 }
+export function spendSabotage(stored,requested='all'){
+  const bank=Math.max(0,Math.min(SABOTAGE_MAX,Number(stored)||0)),wanted=requested==='all'?bank:Number(requested);
+  if(!Number.isFinite(wanted)||wanted<=0||wanted>bank)throw Error('Tenaga sabotaj tidak mencukupi.');
+  const attack=Math.round(wanted*10)/10;return {attack,remaining:Math.round((bank-attack)*10)/10};
+}
+export function chooseSpaceEvent(rng=Math.random){return SPACE_EVENTS[Math.min(SPACE_EVENTS.length-1,Math.floor(rng()*SPACE_EVENTS.length))];}
+export function turnDurationFor(game){return Math.max(10,game.config.turnDuration+(game.event?.turnBonus||0));}
+export function discussionDurationFor(game){return Math.max(15,game.config.discussionDuration+(game.event?.discussionDelta||0));}
 export function newGame(names,tables,rng=Math.random,settings={},characterIds=[]) {
   const error=validateConfig(names,tables); if(error) throw new Error(error);
   const config=normalizeSettings(settings),characters=normalizeCharacterIds(characterIds,names.length),spy=Math.floor(rng()*names.length),count=impostorCount(names.length,config.mode);
   const ids=[spy,...shuffled(names.map((_,i)=>i).filter(i=>i!==spy),rng).slice(0,count-1)];
-  return {config,tables:[...tables],players:names.map((n,i)=>({id:i,name:n.trim(),characterId:characters[i],color:COLORS[characters[i]],role:ids.includes(i)?'IMPOSTOR':'CREW',alive:true,suspicion:0,sabotageEnergy:0})),battery:config.startBattery,round:1,maxRounds:config.maxRounds,logs:[],records:[],turnResults:[],history:[],votes:{},winner:null,reason:null};
+  return {sessionId:missionId(),startedAt:Date.now(),config,tables:[...tables],players:names.map((n,i)=>({id:i,name:n.trim(),characterId:characters[i],color:COLORS[characters[i]],role:ids.includes(i)?'IMPOSTOR':'CREW',alive:true,suspicion:0,sabotageEnergy:0})),battery:config.startBattery,round:1,maxRounds:config.maxRounds,event:chooseSpaceEvent(rng),logs:[],records:[],turnResults:[],history:[],votes:{},bossPending:false,winner:null,reason:null};
 }
 export function livePlayers(game) {return game.players.filter(p=>p.alive);}
 export function miniGame(game){return game.players.length===3;}
@@ -144,10 +159,18 @@ export function voteResult(game) {
   const remaining=livePlayers(game),imps=remaining.filter(p=>p.role==='IMPOSTOR').length;
   if(imps===0){game.winner='CREW';game.reason='Semua penyamar berjaya dikenal pasti.';}
   else if((miniGame(game)||game.config.mode==='plus')&&remaining.length-imps<=imps){game.winner='IMPOSTOR';game.reason='Penyamar kini menyamai bilangan krew.';}
-  else if(game.round>=game.maxRounds){game.winner='IMPOSTOR';game.reason=`Penyamar bertahan selepas undian pusingan ${game.maxRounds}.`;}
+  else if(game.round>=game.maxRounds){game.bossPending=true;}
   return {eliminated,warned,safe:safeRound(game),counts,tied:leaders.length>1};
 }
-export function nextRound(game) {
+export function resolveBoss(game,correct,total=3){
+  if(!game.bossPending||game.winner)throw Error('Boss Sifir tidak aktif.');
+  const score=Math.max(0,Math.min(total,Math.trunc(Number(correct)||0)));
+  game.bossPending=false;game.bossResult={correct:score,total};
+  if(score>=Math.ceil(total*2/3)){game.winner='CREW';game.reason=`Pasukan menewaskan Boss Sifir dengan ${score}/${total} jawapan tepat.`;}
+  else{game.winner='IMPOSTOR';game.reason=`Penyamar bertahan selepas Boss Sifir. Pasukan hanya mendapat ${score}/${total}.`;}
+  return game.winner;
+}
+export function nextRound(game,rng=Math.random) {
   if(game.winner || game.round>=game.maxRounds) throw new Error('Misi telah tamat.');
-  game.round++;game.turnResults=[];game.votes={};game.logs=[];
+  game.round++;game.turnResults=[];game.votes={};game.logs=[];game.event=chooseSpaceEvent(rng);
 }

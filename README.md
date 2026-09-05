@@ -2,19 +2,29 @@
 
 Permainan web 2D berbahasa Melayu untuk 3–8 pemain sekolah rendah. Satu peranti diserahkan bergilir. Mod Mini mengaktifkan 2 krew dan 1 penyamar untuk tepat 3 pemain; mod Klasik mempunyai seorang penyamar, manakala Misi+ mempunyai dua penyamar apabila ada 7–8 pemain.
 
-Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v1.6.0**.
+Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v2.0.0**.
 
-Kemas kini v1.6.0 menambah galeri 20 watak comel dengan kombinasi warna dan aksesori. Setiap pemain boleh menukar watak melalui panel suntingan, manakala watak yang telah digunakan akan dikunci. Kemas kini v1.5.0 menambah Mod Mini 3 pemain dan semakan kemas kini automatik.
+Kemas kini v2.0.0 menambah pemulihan misi, laporan kekal, animasi reaksi, peristiwa angkasa, Boss Sifir dan pilihan kekuatan sabotaj. Kemas kini v1.6.0 menambah galeri 20 watak comel dengan kombinasi warna dan aksesori.
+
+## Misi Angkasa v2.0.0
+
+- Misi yang terganggu disimpan secara automatik. Lobi menawarkan **Sambung misi** pada titik selamat tanpa mendedahkan peranan.
+- Sehingga 30 laporan misi disimpan pada peranti. Tetapan guru memaparkan ringkasan ketepatan dan masa purata setiap murid serta eksport CSV gabungan.
+- Watak kini mempunyai reaksi melompat, bergegar, meraikan dan terpelanting ketika disingkirkan. Jawapan pula menerima kesan visual kombo, betul dan salah.
+- Setiap pusingan menerima satu peristiwa bersama: Graviti Rendah, Hujan Meteor, Aurora Tenaga atau Gerhana Pantas.
+- Jika penyamar masih hidup selepas undian terakhir, semua pemain menghadapi Boss Sifir: 3 soalan dalam 30 saat dan sekurang-kurangnya 2 perlu tepat.
+- Penyamar boleh melancarkan 10%, 25% atau semua tenaga sabotaj. Baki yang tidak digunakan kekal disimpan.
+- **Main semula · pemain sama** mengocok peranan dan turutan tanpa perlu menyediakan semula lobi.
 
 ## Cuba dan main
 
 1. Lobi ialah skrin kapal interaktif. Tekan **＋** untuk menambah pemain; tekan mana-mana watak untuk mengubah nama atau membuangnya. Tekan **Sifir** dalam animasi dan pilih sekurang-kurangnya dua sifir (1–12), kemudian tekan **Mula misi** di bawah kapal.
 2. Ikut nama pada skrin. Tekan dan tahan untuk melihat peranan; lepaskan untuk menutupnya.
-3. Setiap pemain, termasuk penyamar, menjawab tiga soalan darab dengan menaip sendiri pada papan nombor. Selepas soalan ketiga, krew boleh tamatkan giliran; penyamar memilih **Sabotaj sekarang** atau **Simpan untuk pusingan seterusnya**.
+3. Setiap pemain, termasuk penyamar, menjawab tiga soalan darab dengan menaip sendiri pada papan nombor. Selepas soalan ketiga, krew boleh tamatkan giliran; penyamar memilih serangan **10%**, **25%**, semua tenaga atau menyimpannya.
 4. Bateri dan petunjuk tanpa nama dipaparkan selepas semua giliran. Bincang sehingga 90 saat, kemudian undi seorang demi seorang. Pemain hanya boleh memilih pemain aktif yang lain; undi diri sendiri tidak dibenarkan.
 5. Undi seri atau undi “Langkau” tertinggi menyebabkan tiada penyingkiran. Pemain yang disingkirkan menjadi pemerhati.
 
-Krew menang jika bateri mencapai 100% atau semua penyamar disingkirkan. Penyamar menang apabila bateri mencapai 0% atau kekal aktif selepas undian terakhir. Keputusan bateri didahulukan sebelum mesyuarat. Lalai 3 pusingan; guru boleh memilih 2–5.
+Krew menang jika bateri mencapai 100%, semua penyamar disingkirkan atau Boss Sifir ditewaskan. Penyamar menang apabila bateri mencapai 0%, bilangannya menyamai krew atau pasukan gagal melawan Boss Sifir. Keputusan bateri didahulukan sebelum mesyuarat. Lalai 3 pusingan; guru boleh memilih 2–5.
 
 ## Mod Mini 3 pemain v1.5.0
 
@@ -66,7 +76,7 @@ Gabungan ini mengadaptasi idea dan komponen daripada ZIP edisi Claude yang dibek
 - **Laporan pembelajaran:** soalan yang telah dilihat tetapi kehabisan masa direkod salah sekali; soalan yang belum pernah dipaparkan tidak direka sebagai jawapan salah. Data sedikit ditandai, bukan dilabel mahir.
 - **Paparan:** tetapan, sifir laporan dan murid dipaginasi. Papan nombor terbina dalam tidak memanggil papan kekunci telefon. Skrin selesai menyediakan butang untuk menamatkan giliran awal; CSV menyimpan semua jawapan.
 
-Laporan hanya dalam memori: eksport sebelum main semula atau muat semula. Nama kumpulan dan tetapan disimpan setempat. Aplikasi menyemak versi baharu ketika dilancarkan, kembali aktif, dan setiap 15 minit; muat semula ditangguhkan sehingga kembali ke lobi supaya misi tidak terganggu. CSV melindungi nama yang menyerupai formula spreadsheet.
+Misi aktif dan maksimum 30 laporan disimpan setempat pada peranti. Aplikasi menyemak versi baharu ketika dilancarkan, kembali aktif, dan setiap 15 minit; muat semula ditangguhkan sehingga kembali ke lobi supaya misi tidak terganggu. CSV melindungi nama yang menyerupai formula spreadsheet.
 
 ## Kemas kini v1.0.1
 
@@ -130,6 +140,7 @@ Service worker mengaktifkan cache baharu selepas semua aset dimuat turun. Aplika
 - `dist/input.js` — pengesahan sentuhan mengikut soalan dan pointer.
 - `dist/settings.js` — tetapan guru dan kumpulan setempat.
 - `dist/learning.js` — statistik adaptif, laporan dan CSV.
+- `dist/session.js` — pemulihan misi dan sejarah laporan setempat.
 - `dist/merge.css` — papan nombor, tetapan dan laporan satu skrin.
 - `dist/game.js` — penjana matematik, skor, pusingan dan undian.
 - `dist/scene.js` — adegan Phaser, sprite watak asli dan animasi.

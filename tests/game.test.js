@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {CHARACTER_STYLES,SABOTAGE_MAX,newGame,crewQuestion,anuQuestion,checkTaskAnswer,sabotageReward,chargeSabotage,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,normalizeCharacterIds,voteCandidates,canVoteFor,castVote,crisisActive} from '../dist/game.js';
+import {CHARACTER_STYLES,SABOTAGE_MAX,newGame,crewQuestion,anuQuestion,checkTaskAnswer,sabotageReward,chargeSabotage,spendSabotage,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,normalizeCharacterIds,voteCandidates,canVoteFor,castVote,crisisActive,turnDurationFor,discussionDurationFor,resolveBoss,SPACE_EVENTS} from '../dist/game.js';
 import {createAnswerInput,createActionGuard,deviceClass} from '../dist/input.js';
 import {toggleTable} from '../dist/settings.js';
 const names=n=>Array.from({length:n},(_,i)=>`Pemain ${i+1}`);
@@ -44,6 +44,15 @@ test('impostors earn escalating streak energy, split it in Misi+, and bank at 50
   assert.equal(chargeSabotage(49,3),SABOTAGE_MAX);
   const g=make(),spy=g.players.find(p=>p.role==='IMPOSTOR');assert.equal(spy.sabotageEnergy,0);spy.sabotageEnergy=25;
   for(const p of g.players)recordTurn(g,p.id);settleRound(g);skip(g);nextRound(g);assert.equal(spy.sabotageEnergy,25);
+});
+test('impostors can deploy 10, 25 or all energy and retain the remainder',()=>{
+  assert.deepEqual(spendSabotage(40,10),{attack:10,remaining:30});
+  assert.deepEqual(spendSabotage(40,25),{attack:25,remaining:15});
+  assert.deepEqual(spendSabotage(37.5,'all'),{attack:37.5,remaining:0});
+  assert.throws(()=>spendSabotage(8,10));
+});
+test('every game round has one shared space event with bounded time effects',()=>{
+  for(let i=0;i<SPACE_EVENTS.length;i++){const g=newGame(names(4),[2,3],()=>i/SPACE_EVENTS.length);assert.ok(g.event);assert.ok(turnDurationFor(g)>=10);assert.ok(discussionDurationFor(g)>=15);}
 });
 test('3 through 8 players receive equal maximum round charge and complete three rounds',()=>{
   for(let n=3;n<=8;n++){
@@ -89,8 +98,16 @@ test('impostor elimination wins; crew elimination excludes future participation'
   const crew=make();crew.votes={0:1,1:'skip',2:1,3:1};voteResult(crew);assert.equal(crew.winner,null);assert.equal(livePlayers(crew).length,3);assert.throws(()=>recordTurn(crew,1));nextRound(crew);play(crew);assert.equal(crew.battery,70);
 });
 test('final-round vote is allowed before survival wins',()=>{
-  const g=make();for(let i=0;i<3;i++){play(g,1,0);assert.equal(g.winner,null);skip(g);if(i<2)nextRound(g);}assert.equal(g.winner,'IMPOSTOR');
+  const g=make();for(let i=0;i<3;i++){play(g,1,0);assert.equal(g.winner,null);skip(g);if(i<2)nextRound(g);}assert.equal(g.winner,null);assert.equal(g.bossPending,true);assert.equal(resolveBoss(g,1,3),'IMPOSTOR');
   const caught=make();caught.round=3;caught.votes={0:'skip',1:0,2:0,3:0};voteResult(caught);assert.equal(caught.winner,'CREW');
+  const rescued=make();rescued.round=3;skip(rescued);assert.equal(resolveBoss(rescued,2,3),'CREW');assert.match(rescued.reason,/2\/3/);
+});
+test('Boss Sifir completes the final round for every supported roster size',()=>{
+  for(let count=3;count<=8;count++){
+    const g=newGame(names(count),[2,5],()=>0,{maxRounds:2,mode:count>=7?'plus':'classic'});
+    play(g,0,0);skip(g);nextRound(g,()=>.99);play(g,0,0);skip(g);
+    assert.equal(g.bossPending,true);assert.equal(resolveBoss(g,2,3),'CREW');assert.equal(g.bossPending,false);
+  }
 });
 test('incomplete rounds and votes are rejected',()=>{
   const g=make();assert.throws(()=>settleRound(g));assert.throws(()=>voteResult(g));g.votes={0:'invalid',1:0,2:0,3:0};assert.throws(()=>voteResult(g));

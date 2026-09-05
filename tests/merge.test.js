@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {newGame,livePlayers,recordTurn,settleRound,nextRound,castVote,voteResult,crewQuestion,checkTaskAnswer} from '../dist/game.js';
+import {newGame,livePlayers,recordTurn,settleRound,nextRound,castVote,voteResult,crewQuestion,checkTaskAnswer,resolveBoss} from '../dist/game.js';
 import {normalizeSettings,impostorCount,loadRosters,saveRoster} from '../dist/settings.js';
 import {adaptiveTable,tableStatsFor,buildReport,toCsv} from '../dist/learning.js';
+import {saveActiveSession,loadActiveSession,clearActiveSession,saveGameReport,loadReportHistory,clearReportHistory,reportHistorySummary} from '../dist/session.js';
 const names=n=>Array.from({length:n},(_,i)=>`Murid ${i+1}`);
 const make=(n=8,settings={})=>newGame(names(n),[2,3,6,8],()=>0,{mode:'plus',...settings});
 const voteFor=(g,id)=>{g.votes={};for(const p of livePlayers(g))castVote(g,p.id,p.id===id?'skip':id);return voteResult(g);};
@@ -52,7 +53,7 @@ test('all roles receive the same typed multiplication task and can finish immedi
   const draw=source.slice(source.indexOf('function drawQuestion'),source.indexOf('function tickTask'));
   assert.match(draw,/q\.mode='keypad'/);assert.match(draw,/class="keypad"/);assert.doesNotMatch(draw,/class="answer-grid"/);
   assert.doesNotMatch(draw,/IMPOSTOR|impostorQuestion|Bukan sifir|bukan gandaan/);
-  assert.match(source,/data-action="task-finish">Tamat giliran/);assert.match(source,/data-action="task-sabotage"/);assert.match(source,/Simpan untuk pusingan seterusnya/);
+  assert.match(source,/data-action="task-finish">Tamat giliran/);assert.match(source,/data-action="task-sabotage"/);assert.match(source,/Simpan semua tenaga/);assert.match(source,/data-amount="10"/);assert.match(source,/data-amount="25"/);
 });
 test('ANU is a persisted lobby option and guarantees one missing-factor question per turn',()=>{
   const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
@@ -69,11 +70,11 @@ test('lobby controls live over the responsive station canvas',()=>{
 test('Home Screen updates are checked on launch, foreground and periodically',()=>{
   const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8'),manifest=readFileSync(new URL('../dist/manifest.webmanifest',import.meta.url),'utf8');
   assert.match(app,/controllerchange/);assert.match(app,/visibilitychange/);assert.match(app,/setInterval\(checkAppUpdate,15\*60\*1000\)/);assert.match(app,/appUpdatePending.*screen==='LOBBY'/s);
-  assert.match(sw,/1\.6\.0/);assert.match(manifest,/icon-192-v1\.5\.png/);assert.ok(readFileSync(new URL('../dist/assets/icon-192-v1.5.png',import.meta.url)).length>1000);
+  assert.match(sw,/2\.0\.0/);assert.match(sw,/session\.js/);assert.match(manifest,/icon-192-v1\.5\.png/);assert.ok(readFileSync(new URL('../dist/assets/icon-192-v1.5.png',import.meta.url)).length>1000);
 });
-test('Misi+ parity and configured final-round survival both end the game',()=>{
+test('Misi+ parity ends immediately while final-round survival opens Boss Sifir',()=>{
   const parity=make(7);parity.round=2;parity.players.filter(p=>p.role==='CREW').slice(0,3).forEach(p=>p.alive=false);skip(parity);assert.equal(parity.winner,'IMPOSTOR');
-  const last=make(8,{maxRounds:5});last.round=5;skip(last);assert.equal(last.winner,'IMPOSTOR');assert.match(last.reason,/5/);
+  const last=make(8,{maxRounds:5});last.round=5;skip(last);assert.equal(last.winner,null);assert.equal(last.bossPending,true);assert.equal(resolveBoss(last,1),'IMPOSTOR');
 });
 test('settings are bounded and malformed stored settings fall back safely',()=>{
   assert.equal(normalizeSettings(null).maxRounds,3);
@@ -113,4 +114,15 @@ test('named class groups save locally without affecting the active roster',()=>{
   assert.deepEqual(loadRosters()[0].characterIds,[9,4,17]);
   saveRoster('Kumpulan Mini',names(8),[0,1,2,3,4,5,6,7]);assert.equal(loadRosters().length,1);assert.equal(loadRosters()[0].names.length,8);
   delete globalThis.localStorage;
+});
+test('unfinished missions and completed learning reports persist locally',()=>{
+  const data=new Map();globalThis.localStorage={getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value),removeItem:key=>data.delete(key)};
+  const game=make(3);assert.equal(saveActiveSession({game,screen:'TRANSIT',turnIndex:0,turnOrder:[0,1,2]}),true);assert.equal(loadActiveSession().screen,'TRANSIT');clearActiveSession();assert.equal(loadActiveSession(),null);
+  game.winner='CREW';game.records=[{playerId:0,playerName:'Murid 1',kind:'crew',correct:true,given:6,ms:1500,table:2}];assert.equal(saveGameReport(game),true);assert.equal(saveGameReport(game),false);assert.equal(loadReportHistory().length,1);
+  const summary=reportHistorySummary();assert.equal(summary.sessions,1);assert.equal(summary.accuracy,100);assert.equal(summary.players[0].avgSeconds,1.5);clearReportHistory();assert.equal(loadReportHistory().length,0);delete globalThis.localStorage;
+});
+test('v2 interface exposes recovery, history, shared events, boss and animated reactions',()=>{
+  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),scene=readFileSync(new URL('../dist/scene.js',import.meta.url),'utf8'),css=readFileSync(new URL('../dist/merge.css',import.meta.url),'utf8');
+  assert.match(app,/Sambung misi/);assert.match(app,/Laporan tersimpan/);assert.match(app,/function eventCard/);assert.match(app,/function renderBossIntro/);assert.match(app,/Main semula · pemain sama/);
+  assert.match(scene,/reactAll/);assert.match(scene,/type==='ejected'/);assert.match(css,/@keyframes correctPulse/);assert.match(css,/@keyframes bossFloat/);
 });
