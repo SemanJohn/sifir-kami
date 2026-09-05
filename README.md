@@ -2,9 +2,9 @@
 
 Permainan web 2D berbahasa Melayu untuk 3–8 pemain sekolah rendah. Satu peranti diserahkan bergilir. Mod Mini mengaktifkan 2 krew dan 1 penyamar untuk tepat 3 pemain; mod Klasik mempunyai seorang penyamar, manakala Misi+ mempunyai dua penyamar apabila ada 7–8 pemain.
 
-Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v1.5.0**.
+Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v1.6.0**.
 
-Kemas kini v1.5.0 menambah Mod Mini 3 pemain, ikon Home Screen maskot baharu, dan semakan kemas kini automatik semasa aplikasi dibuka atau kembali aktif. Kemas kini v1.4.0 memberi penyamar konsol sabotaj rahsia selepas menjawab sifir.
+Kemas kini v1.6.0 menambah galeri 20 watak comel dengan kombinasi warna dan aksesori. Setiap pemain boleh menukar watak melalui panel suntingan, manakala watak yang telah digunakan akan dikunci. Kemas kini v1.5.0 menambah Mod Mini 3 pemain dan semakan kemas kini automatik.
 
 ## Cuba dan main
 
@@ -22,6 +22,13 @@ Krew menang jika bateri mencapai 100% atau semua penyamar disingkirkan. Penyamar
 - Undian Pusingan 1 ialah amaran selamat; tiada sesiapa disingkirkan.
 - Mulai Pusingan 2, penyamar yang disingkirkan memberi kemenangan kepada krew. Jika seorang krew disingkirkan, penyamar menang kerana nisbah menjadi 1 lawan 1.
 - Bateri dan kesukaran kekal dinormalkan supaya permainan tiga orang masih seimbang.
+
+## Galeri watak v1.6.0
+
+- Tekan watak dalam lobi untuk menukar nama dan memilih rupa pemain.
+- Terdapat 20 watak asli dengan gabungan warna, ekspresi dan aksesori seperti telinga kucing, arnab, mahkota, fon kepala, bunga, topi cef dan cermin mata.
+- Watak yang sedang digunakan pemain lain dipaparkan sebagai terkunci dan tidak boleh dipilih.
+- Pilihan watak disimpan bersama nama pemain dan kumpulan kelas pada peranti.
 
 ## Sabotaj pilihan v1.4.0
 

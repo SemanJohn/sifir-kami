@@ -1,4 +1,4 @@
-import {COLORS,DEFAULT_NAMES,SABOTAGE_MAX,validateConfig,newGame,livePlayers,crewQuestion,anuQuestion,recordTurn,settleRound,voteResult,nextRound,shuffled,voteCandidates,canVoteFor,castVote,safeRound,crisisActive,checkTaskAnswer,chargeSabotage} from './game.js';
+import {COLORS,CHARACTER_STYLES,DEFAULT_NAMES,SABOTAGE_MAX,validateConfig,normalizeCharacterIds,newGame,livePlayers,crewQuestion,anuQuestion,recordTurn,settleRound,voteResult,nextRound,shuffled,voteCandidates,canVoteFor,castVote,safeRound,crisisActive,checkTaskAnswer,chargeSabotage} from './game.js';
 import {createAnswerInput,createActionGuard,deviceClass} from './input.js';
 import {avatarURLs,startStation} from './scene.js';
 import {normalizeSettings,impostorCount,toggleTable,loadRosters,saveRoster} from './settings.js';
@@ -7,12 +7,12 @@ import {tableStatsFor,buildReport,downloadCsv} from './learning.js';
 const $=s=>document.querySelector(s);
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n.toFixed(1)).toLocaleString('ms-MY');
-let names=[...DEFAULT_NAMES],tables=[2,3,4,5];
+let names=[...DEFAULT_NAMES],tables=[2,3,4,5],characterIds=normalizeCharacterIds([],DEFAULT_NAMES.length);
 let settings=normalizeSettings(),settingsPage=0,reportPage=0,reportTablePage=0;
-try {const saved=JSON.parse(localStorage.getItem('sifir-kami-config'));if(saved&&!validateConfig(saved.names,saved.tables)){names=saved.names;tables=saved.tables;}} catch {}
+try {const saved=JSON.parse(localStorage.getItem('sifir-kami-config'));if(saved&&!validateConfig(saved.names,saved.tables)){names=saved.names;tables=saved.tables;characterIds=normalizeCharacterIds(saved.characterIds,names.length);}} catch {}
 try {settings=normalizeSettings(JSON.parse(localStorage.getItem('sifir-kami-settings')||'{}'));}catch{}
 let game=null,screen='LOBBY',roleIndex=0,turnIndex=0,turnOrder=[],voterIndex=0,voterOrder=[],selectedVote=null,hasSeenRole=false,holding=false,task=null,clock=null,epoch=0,meetingDeadline=0,lastVoteResult=null,soundOn=false,audioCtx=null,station=null;
-let helpPage=0,questionId=0,lobbySheet=null,editingPlayerId=null;
+let helpPage=0,questionId=0,lobbySheet=null,editingPlayerId=null,editingCharacterId=null;
 let appRegistration=null,appUpdatePending=false,appRefreshing=false;
 const answerInput=createAnswerInput();
 const lobbyToggleGuard=createActionGuard();
@@ -26,7 +26,7 @@ function updateSound(){const b=$('#sound-button');b.setAttribute('aria-pressed',
 $('#sound-button').addEventListener('click',()=>{soundOn=!soundOn;updateSound();sound();});updateSound();
 $('#settings-button').addEventListener('click',()=>{if(screen==='LOBBY'){settingsPage=0;renderSettings();}});
 const helpPages=[
-  ['Misi pasukan','<p><b>3–8 pemain · 1 peranti.</b> Tekan ＋ untuk menambah pemain dan tekan watak untuk ubah nama atau buang.</p><p>Pilih sifir dalam skrin kapal. Selepas misi bermula, tekan dan tahan untuk melihat peranan.</p><p><b>Krew menang:</b> bateri 100% atau semua penyamar disingkirkan.</p><p><b>Penyamar menang:</b> bateri 0% atau masih aktif selepas undian terakhir.</p>'],
+  ['Misi pasukan','<p><b>3–8 pemain · 1 peranti.</b> Tekan ＋ untuk menambah pemain. Tekan watak untuk mengubah nama, memilih rupa daripada 20 watak, atau membuang pemain.</p><p>Pilih sifir dalam skrin kapal. Selepas misi bermula, tekan dan tahan untuk melihat peranan.</p><p><b>Krew menang:</b> bateri 100% atau semua penyamar disingkirkan.</p><p><b>Penyamar menang:</b> bateri 0% atau masih aktif selepas undian terakhir.</p>'],
   ['Tugasan rahsia','<p>Lalai <b>25 saat</b> setiap giliran. Masa boleh diubah atau dimatikan.</p><p>Semua pemain, termasuk penyamar, menjawab <b>3 soalan darab yang sama jenis</b> dengan menaip sendiri.</p><p>Jika <b>ANU</b> diaktifkan, satu soalan setiap giliran meminta faktor yang hilang, contohnya 7 × ? = 56.</p><p>Gunakan ⌫ untuk memadam dan ✓ untuk menghantar jawapan.</p>'],
   ['Bincang & undi','<p>Lalai <b>90 saat</b> untuk berbincang. Log tidak mendedahkan nama pelaku.</p><p>Setiap pemain aktif memilih pemain lain atau <b>Langkau</b>. Undi diri sendiri dilarang.</p><p>Undi seri atau Langkau terbanyak: tiada penyingkiran.</p><p>Pemain tersingkir menjadi pemerhati.</p>'],
   ['Mod Mini & Misi+','<p><b>3 pemain:</b> Mod Mini aktif secara automatik dengan 2 krew dan 1 penyamar. Pusingan pertama hanya menanda syak.</p><p>Mulai pusingan 2, jika krew tersingkir, penyamar menang kerana tinggal 1 lawan 1.</p><p><b>Misi+ 7–8 pemain:</b> dua penyamar saling mengenali. Krisis mulai pusingan 2; kombo krew 3/3 memberi +6%, jika tiada bateri −8%.</p>'],
@@ -39,13 +39,14 @@ $('#close-help').addEventListener('click',()=>$('#help-dialog').close());
 $('#help-prev').addEventListener('click',()=>{if(helpPage>0){helpPage--;renderHelp();}});
 $('#help-next').addEventListener('click',()=>{if(helpPage===helpPages.length-1)$('#help-dialog').close();else{helpPage++;renderHelp();}});
 
-function avatar(p,cls='big-avatar'){return `<img class="${cls}" src="${avatarURLs[p.id%8]}" alt="" draggable="false">`;}
-function roster(){return game?game.players:names.map((name,id)=>({id,name,alive:true,color:COLORS[id]}));}
+function characterIdOf(p){return Number.isInteger(p.characterId)?p.characterId:(p.id??0)%CHARACTER_STYLES.length;}
+function avatar(p,cls='big-avatar'){return `<img class="${cls}" src="${avatarURLs[characterIdOf(p)]}" alt="" draggable="false">`;}
+function roster(){return game?game.players:names.map((name,id)=>({id,name,characterId:characterIds[id],alive:true,color:COLORS[characterIds[id]]}));}
 function syncRoster(){station?.scene.setRoster(roster());}
 function stopClock(){clearInterval(clock);clock=null;epoch++;}
 function header(title,subtitle,badge){$('#page-title').textContent=title;$('#page-badge').textContent=badge;}
 function base(next,{privateView=false}={}){
-  hideRole();stopClock();answerInput.cancel();screen=next;document.body.dataset.screen=next;$('#layout').className='layout'+(privateView?' private-mode':next==='LOBBY'?' lobby-mode':' shared-play');
+  hideRole();stopClock();answerInput.cancel();screen=next;document.body.dataset.screen=next;document.body.classList.remove('editing-player');$('#layout').className='layout'+(privateView?' private-mode':next==='LOBBY'?' lobby-mode':' shared-play');
   $('#help-button').disabled=privateView;
   $('#sound-button').disabled=privateView;
   $('#settings-button').disabled=next!=='LOBBY';
@@ -58,7 +59,7 @@ function base(next,{privateView=false}={}){
   $('.safety-curtain')?.remove();
   if(!privateView)requestAnimationFrame(()=>station?.game.scale.refresh());
 }
-function persist(){try{localStorage.setItem('sifir-kami-config',JSON.stringify({names,tables}));localStorage.setItem('sifir-kami-settings',JSON.stringify(settings));}catch{}}
+function persist(){try{localStorage.setItem('sifir-kami-config',JSON.stringify({names,tables,characterIds}));localStorage.setItem('sifir-kami-settings',JSON.stringify(settings));}catch{}}
 function applySettings(){document.documentElement.classList.toggle('large-text',settings.largeText);document.documentElement.classList.toggle('reduce-motion',settings.reduceMotion);station?.scene.setMotion(settings.reduceMotion);}
 function modeLabel(){return names.length===3?'Mini':settings.mode==='plus'?'Misi+':'Klasik';}
 function reloadForUpdate(){if(appUpdatePending&&!appRefreshing&&screen==='LOBBY'){appRefreshing=true;location.reload();}}
@@ -76,7 +77,7 @@ function renderSettings(){
 }
 function renderLobby(){
   if(appUpdatePending){reloadForUpdate();return;}
-  lobbySheet=null;editingPlayerId=null;base('LOBBY');
+  lobbySheet=null;editingPlayerId=null;editingCharacterId=null;base('LOBBY');
   panel.innerHTML='<div class="lobby-launch"><p id="lobby-error" class="error" role="status"></p><button id="start-button" class="primary" data-action="start">Mula misi</button></div>';
   refreshLobby();fitViewport();
 }
@@ -91,23 +92,25 @@ function refreshLobby(){
 function renderLobbyControls(){
   const hud=$('#lobby-hud');hud.hidden=false;
   stageShell.classList.toggle('sheet-open',!!lobbySheet);
-  hud.innerHTML=`<div class="lobby-hud-actions"><button data-lobby-action="add" ${names.length>=8?'disabled':''} aria-label="Tambah pemain"><b>＋</b><span>Tambah pemain</span></button><button data-lobby-action="tables" aria-expanded="${lobbySheet==='tables'}"><b>×</b><span>Sifir</span><i>${tables.length}${settings.anu?'+A':''}</i></button></div><p>${names.length<8?'Tekan watak untuk ubah nama atau buang':'Pasukan lengkap · tekan watak untuk ubah nama'}</p>`;
+  document.body.classList.toggle('editing-player',lobbySheet==='player');
+  hud.innerHTML=`<div class="lobby-hud-actions"><button data-lobby-action="add" ${names.length>=8?'disabled':''} aria-label="Tambah pemain"><b>＋</b><span>Tambah pemain</span></button><button data-lobby-action="tables" aria-expanded="${lobbySheet==='tables'}"><b>×</b><span>Sifir</span><i>${tables.length}${settings.anu?'+A':''}</i></button></div><p>${names.length<8?'Tekan watak untuk ubah nama, rupa atau buang':'Pasukan lengkap · tekan watak untuk ubah nama atau rupa'}</p>`;
   const sheet=$('#lobby-sheet');
   if(lobbySheet==='tables'){
     sheet.hidden=false;sheet.innerHTML=`<div class="station-sheet-head"><div><span>Tetapan misi</span><h2>Pilih sifir</h2></div><button data-lobby-action="close" aria-label="Tutup pilihan sifir">×</button></div><div class="station-presets"><button data-lobby-action="preset" data-preset="basic">Asas</button><button data-lobby-action="preset" data-preset="hard">Sukar</button><button data-lobby-action="preset" data-preset="all">Semua</button></div><div class="station-tables">${Array.from({length:12},(_,i)=>i+1).map(n=>`<button data-lobby-action="table" data-table="${n}" aria-pressed="${tables.includes(n)}" aria-label="Sifir ${n}">${n}</button>`).join('')}<button class="anu-toggle" data-lobby-action="anu" aria-pressed="${settings.anu}" aria-label="Soalan ANU">ANU · Cari faktor hilang</button></div><p class="station-sheet-note">${tables.length<2?'Pilih sekurang-kurangnya 2 sifir.':`${tables.length} sifir dipilih${settings.anu?' · ANU aktif':''}.`}</p>`;
   }else if(lobbySheet==='player'&&Number.isInteger(editingPlayerId)&&names[editingPlayerId]!==undefined){
-    const id=editingPlayerId;sheet.hidden=false;sheet.innerHTML=`<div class="station-sheet-head player-edit-head">${avatar({id},'avatar-small')}<label><span>Nama pemain</span><input id="stage-player-name" maxlength="20" value="${escapeHTML(names[id])}" autocomplete="off" spellcheck="false"></label><button data-lobby-action="close" aria-label="Tutup suntingan nama">×</button></div><p id="stage-player-error" class="error" role="status"></p><div class="player-edit-actions">${names.length>3?'<button class="danger-button" data-lobby-action="remove">− Buang pemain</button>':''}<button class="primary" data-lobby-action="save">Simpan nama</button></div>`;
+    const id=editingPlayerId,used=new Set(characterIds.filter((_,i)=>i!==id));
+    sheet.hidden=false;sheet.innerHTML=`<div class="station-sheet-head player-edit-head">${avatar({characterId:editingCharacterId},'avatar-small')}<label><span>Nama pemain</span><input id="stage-player-name" maxlength="20" value="${escapeHTML(names[id])}" autocomplete="off" spellcheck="false"></label><button data-lobby-action="close" aria-label="Tutup suntingan pemain">×</button></div><div class="character-picker-head"><b>Pilih watak</b><span>${CHARACTER_STYLES.length} watak tersedia</span></div><div class="character-grid">${CHARACTER_STYLES.map((style,characterId)=>{const unavailable=used.has(characterId),selected=editingCharacterId===characterId;return `<button data-lobby-action="character" data-character-id="${characterId}" aria-label="${escapeHTML(style.name)}${unavailable?' · sedang digunakan':''}" aria-pressed="${selected}" ${unavailable?'disabled':''}>${avatar({characterId},'character-thumb')}<span>${escapeHTML(style.name)}</span>${unavailable?'<i>✓</i>':''}</button>`;}).join('')}</div><p id="stage-player-error" class="error" role="status"></p><div class="player-edit-actions">${names.length>3?'<button class="danger-button" data-lobby-action="remove">− Buang pemain</button>':''}<button class="primary" data-lobby-action="save">Simpan pemain</button></div>`;
   }else sheet.hidden=true;
   station?.scene.setPlayerHandler(lobbySheet?null:openPlayerEditor);
 }
 function validateLobby(){const error=validateConfig(names,tables);$('#lobby-error').textContent=error;$('#start-button').disabled=!!error;}
-function openPlayerEditor(id){if(screen!=='LOBBY'||!Number.isInteger(Number(id))||!names[Number(id)])return;editingPlayerId=Number(id);lobbySheet='player';renderLobbyControls();requestAnimationFrame(()=>{$('#stage-player-name')?.focus();$('#stage-player-name')?.select();});}
+function openPlayerEditor(id){if(screen!=='LOBBY'||!Number.isInteger(Number(id))||!names[Number(id)])return;editingPlayerId=Number(id);editingCharacterId=characterIds[editingPlayerId];lobbySheet='player';renderLobbyControls();}
 function savePlayerName(){
   const input=$('#stage-player-name'),message=$('#stage-player-error');if(!input||editingPlayerId===null)return;
   const value=input.value.trim();let error='';
   if(!value)error='Nama pemain tidak boleh kosong.';else if(names.some((n,i)=>i!==editingPlayerId&&n.trim().toLocaleLowerCase('ms-MY')===value.toLocaleLowerCase('ms-MY')))error='Gunakan nama yang berbeza.';
   if(error){message.textContent=error;return;}
-  names[editingPlayerId]=value;lobbySheet=null;editingPlayerId=null;refreshLobby();
+  names[editingPlayerId]=value;characterIds[editingPlayerId]=editingCharacterId;lobbySheet=null;editingPlayerId=null;editingCharacterId=null;refreshLobby();
 }
 function dots(current,total){return `<div class="progress-dots" aria-label="${current} daripada ${total}">${Array.from({length:total},(_,i)=>`<span class="progress-dot ${i<current?'done':''}"></span>`).join('')}</div>`;}
 function renderRole(){
@@ -240,7 +243,7 @@ function renderReport(){
   const weak=summary.tables.filter(t=>t.seen>=2&&t.accuracy<70);
   panel.innerHTML=`<section class="panel report-panel">${p?`<div class="report-person">${avatar(p,'report-avatar')}<div><h2>${escapeHTML(p.name)}</h2><p>${p.role==='CREW'?'Krew':'Penyamar'} · sifir darab</p></div></div>`:'<div class="report-heading"><h2>Prestasi sifir pasukan</h2><p>Semua pemain</p></div>'}<div class="stats-grid"><div class="stat"><strong>${summary.accuracy===null?'—':summary.accuracy+'%'}</strong><span>Ketepatan</span></div><div class="stat"><strong>${summary.correct}/${summary.attempts}</strong><span>Betul / dilihat</span></div><div class="stat"><strong>${summary.avgSeconds===null?'—':summary.avgSeconds+'s'}</strong><span>Purata masa</span></div></div>${reportBars(summary.tables)}<p class="report-note">${weak.length?'Perlu ulang: '+weak.map(t=>t.table).join(', ')+'.':summary.tables.some(t=>t.seen>=2)?'Tiada sifir bawah 70% dalam sampel ini.':'Data masih sedikit untuk mengenal pasti sifir lemah.'}</p><div class="report-footer"><button class="secondary" data-action="report-prev" aria-label="Halaman laporan sebelumnya" ${reportPage===0?'disabled':''}>‹</button><button class="secondary" data-action="report-next" aria-label="Halaman laporan seterusnya" ${reportPage===game.players.length?'disabled':''}>›</button><button class="primary" data-action="report-csv" aria-label="Eksport laporan CSV">CSV ↓</button><button class="secondary" data-action="game-over" aria-label="Tutup laporan">Tutup</button></div></section>`;
 }
-function startGame(){const err=validateConfig(names,tables);if(err)return;persist();game=newGame(names,tables,Math.random,settings);roleIndex=0;renderRole();}
+function startGame(){const err=validateConfig(names,tables);if(err)return;persist();game=newGame(names,tables,Math.random,settings,characterIds);roleIndex=0;renderRole();}
 
 panel.addEventListener('change',e=>{
   if(!e.target.matches('[data-setting]')||screen!=='SETTINGS')return;
@@ -284,8 +287,8 @@ panel.addEventListener('click',e=>{
     case 'settings-prev':settingsPage=Math.max(0,settingsPage-1);renderSettings();break;
     case 'settings-next':settingsPage=Math.min(2,settingsPage+1);renderSettings();break;
     case 'settings-done':persist();applySettings();renderLobby();break;
-    case 'roster-save':try{const error=validateConfig(names,[2,3]);if(error)throw Error(error);saveRoster($('#roster-name').value,names);renderSettings();$('#settings-message').textContent='Kumpulan disimpan pada peranti ini.';}catch(err){$('#settings-message').textContent=err.message;}break;
-    case 'roster-load':{const value=$('#roster-select').value,r=loadRosters()[Number(value)];if(value!==''&&r){names=[...r.names];persist();renderLobby();}break;}
+    case 'roster-save':try{const error=validateConfig(names,[2,3]);if(error)throw Error(error);saveRoster($('#roster-name').value,names,characterIds);renderSettings();$('#settings-message').textContent='Kumpulan disimpan pada peranti ini.';}catch(err){$('#settings-message').textContent=err.message;}break;
+    case 'roster-load':{const value=$('#roster-select').value,r=loadRosters()[Number(value)];if(value!==''&&r){names=[...r.names];characterIds=normalizeCharacterIds(r.characterIds,names.length);persist();renderLobby();}break;}
     case 'report':reportPage=0;reportTablePage=0;renderReport();break;
     case 'report-prev':reportPage=Math.max(0,reportPage-1);reportTablePage=0;renderReport();break;
     case 'report-next':reportPage=Math.min(game.players.length,reportPage+1);reportTablePage=0;renderReport();break;
@@ -314,11 +317,12 @@ panel.addEventListener('click',e=>{
 stageShell.addEventListener('click',e=>{
   const b=e.target.closest('[data-lobby-action]');if(!b||b.disabled||screen!=='LOBBY')return;const action=b.dataset.lobbyAction;sound();
   if((action==='table'||action==='anu')&&!lobbyToggleGuard.accept(action==='table'?`table:${b.dataset.table}`:'anu'))return;
-  if(action==='add'&&names.length<8){let n=names.length+1,name=`Krew ${n}`;while(names.some(x=>x.toLocaleLowerCase('ms-MY')===name.toLocaleLowerCase('ms-MY')))name=`Krew ${++n}`;names.push(name);refreshLobby();openPlayerEditor(names.length-1);return;}
-  if(action==='tables'){lobbySheet=lobbySheet==='tables'?null:'tables';editingPlayerId=null;renderLobbyControls();return;}
-  if(action==='close'){lobbySheet=null;editingPlayerId=null;renderLobbyControls();return;}
+  if(action==='add'&&names.length<8){let n=names.length+1,name=`Krew ${n}`;while(names.some(x=>x.toLocaleLowerCase('ms-MY')===name.toLocaleLowerCase('ms-MY')))name=`Krew ${++n}`;names.push(name);characterIds=normalizeCharacterIds(characterIds,names.length);refreshLobby();openPlayerEditor(names.length-1);return;}
+  if(action==='tables'){lobbySheet=lobbySheet==='tables'?null:'tables';editingPlayerId=null;editingCharacterId=null;renderLobbyControls();return;}
+  if(action==='close'){lobbySheet=null;editingPlayerId=null;editingCharacterId=null;renderLobbyControls();return;}
+  if(action==='character'&&editingPlayerId!==null){const next=Number(b.dataset.characterId),used=characterIds.some((characterId,i)=>i!==editingPlayerId&&characterId===next),draftName=$('#stage-player-name')?.value;if(!used&&Number.isInteger(next)&&next>=0&&next<CHARACTER_STYLES.length){editingCharacterId=next;renderLobbyControls();if(draftName!==undefined)$('#stage-player-name').value=draftName;}return;}
   if(action==='save'){savePlayerName();return;}
-  if(action==='remove'&&names.length>3&&editingPlayerId!==null){names.splice(editingPlayerId,1);lobbySheet=null;editingPlayerId=null;refreshLobby();return;}
+  if(action==='remove'&&names.length>3&&editingPlayerId!==null){names.splice(editingPlayerId,1);characterIds.splice(editingPlayerId,1);lobbySheet=null;editingPlayerId=null;editingCharacterId=null;refreshLobby();return;}
   if(action==='table'){tables=toggleTable(tables,b.dataset.table);refreshLobby();return;}
   if(action==='anu'){settings=normalizeSettings({...settings,anu:!settings.anu});refreshLobby();return;}
   if(action==='preset'){tables=b.dataset.preset==='basic'?[2,5,10]:b.dataset.preset==='hard'?[6,7,8,9]:Array.from({length:12},(_,i)=>i+1);refreshLobby();}

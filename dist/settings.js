@@ -19,13 +19,13 @@ export function toggleTable(tables,value){
 }
 const ROSTERS='sifir-kami-class-rosters';
 export function loadRosters(){
-  try{return JSON.parse(localStorage.getItem(ROSTERS)||'[]').filter(r=>typeof r.name==='string'&&Array.isArray(r.names)&&r.names.length>=3&&r.names.length<=8&&r.names.every(n=>typeof n==='string')).slice(0,12);}catch{return [];}
+  try{return JSON.parse(localStorage.getItem(ROSTERS)||'[]').filter(r=>typeof r.name==='string'&&Array.isArray(r.names)&&r.names.length>=3&&r.names.length<=8&&r.names.every(n=>typeof n==='string')).map(r=>({...r,characterIds:Array.isArray(r.characterIds)?r.characterIds:[]})).slice(0,12);}catch{return [];}
 }
-export function saveRoster(label,names){
+export function saveRoster(label,names,characterIds=[]){
   const title=String(label).trim().slice(0,30);if(!title)throw Error('Isi nama kumpulan dahulu.');
   const all=loadRosters(),index=all.findIndex(r=>r.name===title);
   if(index<0&&all.length>=12)throw Error('Maksimum 12 kumpulan disimpan.');
-  const entry={name:title,names:[...names]};
+  const entry={name:title,names:[...names],characterIds:Array.isArray(characterIds)?[...characterIds]:[]};
   if(index<0)all.push(entry);else all[index]=entry;
   try{localStorage.setItem(ROSTERS,JSON.stringify(all));}catch{throw Error('Peranti tidak membenarkan penyimpanan.');}
 }

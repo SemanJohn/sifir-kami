@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SABOTAGE_MAX,newGame,crewQuestion,anuQuestion,checkTaskAnswer,sabotageReward,chargeSabotage,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,voteCandidates,canVoteFor,castVote,crisisActive} from '../dist/game.js';
+import {CHARACTER_STYLES,SABOTAGE_MAX,newGame,crewQuestion,anuQuestion,checkTaskAnswer,sabotageReward,chargeSabotage,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,normalizeCharacterIds,voteCandidates,canVoteFor,castVote,crisisActive} from '../dist/game.js';
 import {createAnswerInput,createActionGuard,deviceClass} from '../dist/input.js';
 import {toggleTable} from '../dist/settings.js';
 const names=n=>Array.from({length:n},(_,i)=>`Pemain ${i+1}`);
@@ -28,6 +28,14 @@ test('default tables 2 through 5 can each be unticked',()=>{
 test('configuration rejects invalid rosters and fewer than two tables',()=>{
   assert.ok(validateConfig(names(2),[2,3]));assert.ok(validateConfig(names(9),[2,3]));assert.ok(validateConfig(['Ali','ali','B'],[2,3]));assert.ok(validateConfig(names(3),[1]));assert.equal(validateConfig(names(3),[1,2]),'');
   for(let n=3;n<=8;n++)assert.equal(make(n).players.filter(p=>p.role==='IMPOSTOR').length,1);
+});
+test('twenty unique character styles are available and duplicate choices are replaced',()=>{
+  assert.equal(CHARACTER_STYLES.length,20);
+  assert.equal(new Set(CHARACTER_STYLES.map(style=>style.name)).size,20);
+  assert.equal(new Set(CHARACTER_STYLES.map(style=>style.accessory)).size,20);
+  assert.deepEqual(normalizeCharacterIds([19,19,-1,4],4),[19,0,1,4]);
+  const g=newGame(names(3),[2,3],()=>0,{},[19,4,7]);
+  assert.deepEqual(g.players.map(player=>player.characterId),[19,4,7]);
 });
 test('impostors earn escalating streak energy, split it in Misi+, and bank at 50%',()=>{
   assert.deepEqual([1,2,3].map(n=>sabotageReward(n)),[5,8,12]);

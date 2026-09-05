@@ -1,6 +1,29 @@
 import {normalizeSettings,impostorCount} from './settings.js';
 import {adaptiveTable} from './learning.js';
-export const COLORS = ['#ffb95b','#76d5c3','#b49af4','#ff8794','#79bcf5','#d6e575','#f1a9e3','#dce6f0'];
+export const CHARACTER_STYLES = [
+  {body:'#ffb95b',accent:'#f46f61',accessory:'cat',name:'Oyen'},
+  {body:'#76d5c3',accent:'#3b8fd9',accessory:'bunny',name:'Arnab'},
+  {body:'#b49af4',accent:'#8fd35f',accessory:'sprout',name:'Tunas'},
+  {body:'#ff8794',accent:'#ffd166',accessory:'halo',name:'Bintang'},
+  {body:'#79bcf5',accent:'#f598d8',accessory:'headphones',name:'DJ'},
+  {body:'#d6e575',accent:'#ef6f6c',accessory:'cap',name:'Kapten'},
+  {body:'#f1a9e3',accent:'#60d8cf',accessory:'star',name:'Nova'},
+  {body:'#dce6f0',accent:'#ff8f70',accessory:'flower',name:'Bunga'},
+  {body:'#ff9f68',accent:'#64c8e8',accessory:'goggles',name:'Jurutera'},
+  {body:'#62d0a9',accent:'#ff73a8',accessory:'bow',name:'Pita'},
+  {body:'#9aa9ff',accent:'#ffd45f',accessory:'horns',name:'Komet'},
+  {body:'#ff7fbb',accent:'#7ce2d2',accessory:'tiara',name:'Puteri'},
+  {body:'#f3c862',accent:'#6f9ff5',accessory:'propeller',name:'Kipas'},
+  {body:'#70d2ef',accent:'#c99bf4',accessory:'moon',name:'Bulan'},
+  {body:'#c69af1',accent:'#f2ad62',accessory:'bear',name:'Beruang'},
+  {body:'#74d58b',accent:'#ff835f',accessory:'scarf',name:'Pengembara'},
+  {body:'#ffad76',accent:'#8bd5c5',accessory:'chef',name:'Cef'},
+  {body:'#ea83a9',accent:'#69c9ff',accessory:'party',name:'Pesta'},
+  {body:'#62c6da',accent:'#ffbd58',accessory:'rocket',name:'Roket'},
+  {body:'#a6d56f',accent:'#7e75da',accessory:'glasses',name:'Profesor'}
+];
+export const COLORS = CHARACTER_STYLES.map(style=>style.body);
+export const CHARACTER_COUNT = CHARACTER_STYLES.length;
 export const DEFAULT_NAMES = ['Kapten Oyen', 'Mochi', 'Boba', 'Luna'];
 export const SABOTAGE_MAX = 50;
 export function shuffled(items, rng = Math.random) {
@@ -9,6 +32,15 @@ export function shuffled(items, rng = Math.random) {
   return out;
 }
 export function randomItem(items, rng = Math.random) { return items[Math.floor(rng()*items.length)]; }
+export function normalizeCharacterIds(ids,count){
+  const used=new Set(),values=Array.isArray(ids)?ids:[];
+  return Array.from({length:count},(_,index)=>{
+    const requested=Number(values[index]);
+    let id=Number.isInteger(requested)&&requested>=0&&requested<CHARACTER_COUNT&&!used.has(requested)?requested:0;
+    while(used.has(id))id++;
+    used.add(id);return id;
+  });
+}
 export function validateConfig(names, tables) {
   if(names.length<3 || names.length>8) return 'Misi perlukan 3 hingga 8 pemain.';
   if(names.some(n=>!n.trim() || n.trim().length>20)) return 'Isi setiap nama (maksimum 20 aksara).';
@@ -39,11 +71,11 @@ export function chargeSabotage(stored,streak,activeImpostors=1){
   const current=Math.max(0,Number(stored)||0);
   return Math.min(SABOTAGE_MAX,Math.round((current+sabotageReward(streak,activeImpostors))*10)/10);
 }
-export function newGame(names,tables,rng=Math.random,settings={}) {
+export function newGame(names,tables,rng=Math.random,settings={},characterIds=[]) {
   const error=validateConfig(names,tables); if(error) throw new Error(error);
-  const config=normalizeSettings(settings),spy=Math.floor(rng()*names.length),count=impostorCount(names.length,config.mode);
+  const config=normalizeSettings(settings),characters=normalizeCharacterIds(characterIds,names.length),spy=Math.floor(rng()*names.length),count=impostorCount(names.length,config.mode);
   const ids=[spy,...shuffled(names.map((_,i)=>i).filter(i=>i!==spy),rng).slice(0,count-1)];
-  return {config,tables:[...tables],players:names.map((n,i)=>({id:i,name:n.trim(),color:COLORS[i],role:ids.includes(i)?'IMPOSTOR':'CREW',alive:true,suspicion:0,sabotageEnergy:0})),battery:config.startBattery,round:1,maxRounds:config.maxRounds,logs:[],records:[],turnResults:[],history:[],votes:{},winner:null,reason:null};
+  return {config,tables:[...tables],players:names.map((n,i)=>({id:i,name:n.trim(),characterId:characters[i],color:COLORS[characters[i]],role:ids.includes(i)?'IMPOSTOR':'CREW',alive:true,suspicion:0,sabotageEnergy:0})),battery:config.startBattery,round:1,maxRounds:config.maxRounds,logs:[],records:[],turnResults:[],history:[],votes:{},winner:null,reason:null};
 }
 export function livePlayers(game) {return game.players.filter(p=>p.alive);}
 export function miniGame(game){return game.players.length===3;}
