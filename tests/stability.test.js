@@ -138,3 +138,18 @@ test('the crew layout is rebuilt only when the stage or roster really changes',(
   assert.notEqual(base,rosterSignature(390,600,false,[{...crew[0],alive:false},crew[1]]));
   assert.notEqual(base,rosterSignature(390,600,false,crew.slice(0,1)));
 });
+test('a hidden station sleeps before the next frame, never handing Phaser a 0x0 canvas',()=>{
+  const code=slice(appSource(),'function stageLive','function checkpoint');
+  const el={clientWidth:0,clientHeight:0},calls=[],frames=[];
+  const game={scale:{stopListeners:()=>calls.push('stop'),startListeners:()=>calls.push('start'),refresh:()=>calls.push('refresh')},loop:{sleep:()=>calls.push('sleep'),wake:()=>calls.push('wake')}};
+  const ctx={station:{game},$:()=>el,requestAnimationFrame:f=>frames.push(f)};
+  runInNewContext(code+';syncStage();',ctx);
+  // A deferred sleep lets the Phaser loop step once more on a 0x0 parent, which
+  // throws "Framebuffer status: Incomplete Attachment", so it must be immediate.
+  assert.deepEqual(calls,['stop','sleep']);assert.equal(frames.length,0);
+  // Waking still waits a frame so the new layout can settle first.
+  el.clientWidth=390;el.clientHeight=600;runInNewContext('syncStage()',ctx);
+  assert.deepEqual(calls,['stop','sleep']);assert.equal(frames.length,1);
+  frames[0]();
+  assert.deepEqual(calls,['stop','sleep','start','wake','refresh']);
+});

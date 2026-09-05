@@ -67,7 +67,14 @@ function base(next,{privateView=false}={}){
 function stageLive(){const el=$('#stage');return !!el&&el.clientWidth>1&&el.clientHeight>1;}
 function stageSleep(){const g=station?.game;if(!g||g.__asleep)return;g.__asleep=true;try{g.scale.stopListeners();g.loop.sleep();}catch{}}
 function stageWake(){const g=station?.game;if(!g||!stageLive())return;if(g.__asleep){g.__asleep=false;try{g.scale.startListeners();g.loop.wake();}catch{}}try{g.scale.refresh();}catch{}}
-function syncStage(){requestAnimationFrame(()=>stageLive()?stageWake():stageSleep());}
+// Tidurkan pentas serta-merta selepas susun atur berubah. Jika ditangguhkan,
+// gelung Phaser boleh melangkah dahulu, melihat ibu bapa 0x0 dan mencuba
+// framebuffer bersaiz sifir ('Framebuffer status: Incomplete Attachment').
+// Membangunkan pentas masih ditangguhkan supaya susun atur sempat menetap.
+function syncStage(){
+  if(!stageLive()){stageSleep();return;}
+  requestAnimationFrame(()=>stageLive()?stageWake():stageSleep());
+}
 // Pada telefon, pentas disembunyikan semasa bermain dan gelung Phaser tidur.
 // Reaksi yang dihantar ketika itu tidak akan tamat dan akan meletus sekaligus
 // apabila lobi kembali, jadi kesan hanya dimainkan bila pentas benar-benar dilihat.
