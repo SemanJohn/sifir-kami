@@ -158,7 +158,7 @@ export function voteResult(game) {
   }
   const remaining=livePlayers(game),imps=remaining.filter(p=>p.role==='IMPOSTOR').length;
   if(imps===0){game.winner='CREW';game.reason='Semua penyamar berjaya dikenal pasti.';}
-  else if((miniGame(game)||game.config.mode==='plus')&&remaining.length-imps<=imps){game.winner='IMPOSTOR';game.reason='Penyamar kini menyamai bilangan krew.';}
+  else if(remaining.length-imps<=imps){game.winner='IMPOSTOR';game.reason='Penyamar kini menyamai bilangan krew.';}
   else if(game.round>=game.maxRounds){game.bossPending=true;}
   return {eliminated,warned,safe:safeRound(game),counts,tied:leaders.length>1};
 }

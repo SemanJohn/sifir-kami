@@ -1,6 +1,6 @@
 const PREFIX='sifir-kami:'+self.registration.scope+':';
-const CACHE=PREFIX+'2.0.0';
-const FILES=['./','./index.html','./style.css','./merge.css','./app.js','./game.js','./input.js','./settings.js','./learning.js','./session.js','./scene.js','./manifest.webmanifest','./vendor/phaser.min.js','./assets/station.png','./assets/icon-180-v1.5.png','./assets/icon-192-v1.5.png','./assets/icon-512-v1.5.png'];
+const CACHE=PREFIX+'2.1.0';
+const FILES=['./','./index.html','./style.css','./merge.css','./app.js','./game.js','./input.js','./settings.js','./learning.js','./session.js','./scene.js','./manifest.webmanifest','./vendor/phaser.min.js','./assets/station.webp','./assets/icon-180.png','./assets/icon-192.png','./assets/icon-512.png','./assets/icon-maskable-512.png','./assets/fonts/baloo2-700.woff2','./assets/fonts/baloo2-800.woff2','./assets/fonts/dmsans-400.woff2','./assets/fonts/dmsans-700.woff2'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES.map(path=>new Request(path,{cache:'reload'})))).then(()=>self.skipWaiting())));
 // Activate fixed assets immediately. The app reloads only at the lobby;
 // active games already have their JS in memory and continue uninterrupted.

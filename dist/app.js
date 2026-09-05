@@ -59,9 +59,15 @@ function base(next,{privateView=false}={}){
   $('#lobby-hud').hidden=next!=='LOBBY';$('#lobby-sheet').hidden=true;
   station?.scene.setPlayerHandler(next==='LOBBY'?openPlayerEditor:null);
   $('.safety-curtain')?.remove();
-  if(!privateView)requestAnimationFrame(()=>station?.game.scale.refresh());
+  syncStage();
   queueMicrotask(checkpoint);
 }
+// Elak Phaser cuba melukis pada kanvas 0x0 apabila pentas disembunyikan.
+// Ini juga menjimatkan kuasa semasa skrin peribadi dipaparkan.
+function stageLive(){const el=$('#stage');return !!el&&el.clientWidth>1&&el.clientHeight>1;}
+function stageSleep(){const g=station?.game;if(!g||g.__asleep)return;g.__asleep=true;try{g.scale.stopListeners();g.loop.sleep();}catch{}}
+function stageWake(){const g=station?.game;if(!g||!stageLive())return;if(g.__asleep){g.__asleep=false;try{g.scale.startListeners();g.loop.wake();}catch{}}try{g.scale.refresh();}catch{}}
+function syncStage(){requestAnimationFrame(()=>stageLive()?stageWake():stageSleep());}
 function checkpoint(){
   if(!game||game.winner||['LOBBY','SETTINGS','GAME_OVER','REPORT','HISTORY'].includes(screen))return;
   saveActiveSession({game,screen,roleIndex,turnIndex,turnOrder,voterIndex,voterOrder,meetingDeadline,lastVoteResult,task,bossTask});
@@ -100,7 +106,7 @@ function renderLobbyControls(){
   const hud=$('#lobby-hud');hud.hidden=false;
   stageShell.classList.toggle('sheet-open',!!lobbySheet);
   document.body.classList.toggle('editing-player',lobbySheet==='player');
-  hud.innerHTML=`<div class="lobby-hud-actions"><button data-lobby-action="add" ${names.length>=8?'disabled':''} aria-label="Tambah pemain"><b>＋</b><span>Tambah pemain</span></button><button data-lobby-action="tables" aria-expanded="${lobbySheet==='tables'}"><b>×</b><span>Sifir</span><i>${tables.length}${settings.anu?'+A':''}</i></button></div><p>${names.length<8?'Tekan watak untuk ubah nama, rupa atau buang':'Pasukan lengkap · tekan watak untuk ubah nama atau rupa'}</p>`;
+  hud.innerHTML=`<div class="lobby-hud-actions"><button data-lobby-action="add" ${names.length>=8?'disabled':''} aria-label="Tambah pemain"><b>＋</b><span>Tambah pemain</span></button><button data-lobby-action="tables" aria-label="Pilih sifir yang diuji" aria-expanded="${lobbySheet==='tables'}"><b>×</b><span>Sifir</span><i>${tables.length}${settings.anu?'+A':''}</i></button></div><p>${names.length<8?'Tekan watak untuk ubah nama, rupa atau buang':'Pasukan lengkap · tekan watak untuk ubah nama atau rupa'}</p>`;
   const sheet=$('#lobby-sheet');
   if(lobbySheet==='tables'){
     sheet.hidden=false;sheet.innerHTML=`<div class="station-sheet-head"><div><span>Tetapan misi</span><h2>Pilih sifir</h2></div><button data-lobby-action="close" aria-label="Tutup pilihan sifir">×</button></div><div class="station-presets"><button data-lobby-action="preset" data-preset="basic">Asas</button><button data-lobby-action="preset" data-preset="hard">Sukar</button><button data-lobby-action="preset" data-preset="all">Semua</button></div><div class="station-tables">${Array.from({length:12},(_,i)=>i+1).map(n=>`<button data-lobby-action="table" data-table="${n}" aria-pressed="${tables.includes(n)}" aria-label="Sifir ${n}">${n}</button>`).join('')}<button class="anu-toggle" data-lobby-action="anu" aria-pressed="${settings.anu}" aria-label="Soalan ANU">ANU · Cari faktor hilang</button></div><p class="station-sheet-note">${tables.length<2?'Pilih sekurang-kurangnya 2 sifir.':`${tables.length} sifir dipilih${settings.anu?' · ANU aktif':''}.`}</p>`;
@@ -207,7 +213,7 @@ function renderTurnEnd(){
   base('TURN_END',{privateView:true});header('Giliran selesai','Rahsiakan apa yang kamu lihat.',roundBadge());
   panel.innerHTML=`<section class="panel private-card"><div class="orbit-symbol">✧</div><h2>Modul disimpan</h2><p>Paparan kini selamat untuk dikongsi.<br>${turnIndex+1<turnOrder.length?'Serahkan peranti kepada pemain seterusnya.':'Letakkan peranti di tengah untuk tatapan bersama.'}</p><div style="margin-top:30px"><button class="primary" data-action="turn-next">${turnIndex+1<turnOrder.length?'Pemain seterusnya':'Periksa keadaan kapal'}</button></div></section>`;
 }
-function batteryPanel(){const h=game.history.at(-1);return `<div class="battery-row"><span>Bateri kapal</span><span class="battery-number">${fmt(game.battery)}%</span></div><div class="battery-bar" role="progressbar" aria-label="Bateri kapal" aria-valuenow="${game.battery}" aria-valuemin="0" aria-valuemax="100"><div class="battery-fill ${game.battery<25?'low':''}" style="width:${game.battery}%"></div></div><p class="battery-change">${h?`${fmt(h.before)}% → ${fmt(h.after)}%`:'50%'} <span class="muted">· Sasaran 100%</span></p>`;}
+function batteryPanel(){const h=game.history.at(-1);return `<div class="battery-row"><span>Bateri kapal</span><span class="battery-number">${fmt(game.battery)}%</span></div><div class="battery-bar" role="progressbar" aria-label="Bateri kapal" aria-valuenow="${game.battery}" aria-valuemin="0" aria-valuemax="100"><div class="battery-fill ${game.battery<25?'low':''}" style="width:${game.battery}%"></div></div><p class="battery-change">${h?`${fmt(h.before)}% → ${fmt(h.after)}%`:fmt(game.config.startBattery)+'%'} <span class="muted">· Sasaran 100%</span></p>`;}
 function renderCommand(){
   base('COMMAND');header('Laporan kapal','',roundBadge());
   panel.innerHTML=`<section class="panel command-panel">${eventCard()}${batteryPanel()}<div class="log-list">${game.logs.map(l=>`<div class="log ${l.kind}"><span class="log-icon">${l.kind==='warn'?'⚠':'✧'}</span><span>${escapeHTML(l.text)}</span></div>`).join('')}</div><button class="primary bottom-action" data-action="${game.winner?'game-over':'meeting'}">${game.winner?'Keputusan misi':'Bincang & undi'}</button></section>`;
@@ -411,11 +417,11 @@ function fitViewport(){
   document.documentElement.dataset.device=deviceClass(width,coarse);
   document.documentElement.dataset.orientation=width>height?'landscape':'portrait';
   document.body.classList.toggle('editing-name',document.activeElement?.matches('[data-name],#roster-name')??false);
-  requestAnimationFrame(()=>station?.game.scale.refresh());
+  syncStage();
 }
 window.addEventListener('resize',fitViewport);window.visualViewport?.addEventListener('resize',fitViewport);
 document.addEventListener('focusin',fitViewport);document.addEventListener('focusout',()=>requestAnimationFrame(fitViewport));
-applySettings();fitViewport();renderLobby();station=startStation($('#stage'),s=>{s.setMotion(settings.reduceMotion);s.setEvent(game?.event?.id||null);s.setRoster(roster());s.setPlayerHandler(openPlayerEditor);if($('#layout').classList.contains('private-mode'))s.scene.pause();});
+applySettings();fitViewport();renderLobby();station=startStation($('#stage'),s=>{s.setMotion(settings.reduceMotion);s.setEvent(game?.event?.id||null);s.setRoster(roster());s.setPlayerHandler(openPlayerEditor);if($('#layout').classList.contains('private-mode'))s.scene.pause();syncStage();});
 if('serviceWorker' in navigator){
   let controlled=!!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!controlled){controlled=true;return;}appUpdatePending=true;reloadForUpdate();});

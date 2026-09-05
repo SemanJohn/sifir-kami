@@ -1,4 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
+/* Fon setempat (SIL OFL 1.1) memastikan rupa aplikasi kekal sama ketika luar talian. */
+@font-face{font-family:'Baloo 2';font-style:normal;font-weight:700;font-display:swap;src:url('./assets/fonts/baloo2-700.woff2') format('woff2')}
+@font-face{font-family:'Baloo 2';font-style:normal;font-weight:800;font-display:swap;src:url('./assets/fonts/baloo2-800.woff2') format('woff2')}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:400;font-display:swap;src:url('./assets/fonts/dmsans-400.woff2') format('woff2')}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:700;font-display:swap;src:url('./assets/fonts/dmsans-700.woff2') format('woff2')}
 :root{color-scheme:dark;--bg:#101827;--panel:#1a2536;--line:#334155;--ink:#f5f5f4;--muted:#a3b0c2;--amber:#ffbf69;--mint:#8bd5c5;--red:#ff8c9d;--app-height:100dvh;font-family:'DM Sans',system-ui,sans-serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none}

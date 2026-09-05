@@ -70,7 +70,12 @@ test('lobby controls live over the responsive station canvas',()=>{
 test('Home Screen updates are checked on launch, foreground and periodically',()=>{
   const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8'),manifest=readFileSync(new URL('../dist/manifest.webmanifest',import.meta.url),'utf8');
   assert.match(app,/controllerchange/);assert.match(app,/visibilitychange/);assert.match(app,/setInterval\(checkAppUpdate,15\*60\*1000\)/);assert.match(app,/appUpdatePending.*screen==='LOBBY'/s);
-  assert.match(sw,/2\.0\.0/);assert.match(sw,/session\.js/);assert.match(manifest,/icon-192-v1\.5\.png/);assert.ok(readFileSync(new URL('../dist/assets/icon-192-v1.5.png',import.meta.url)).length>1000);
+  assert.match(sw,/2\.1\.0/);assert.match(sw,/session\.js/);assert.match(manifest,/icon-maskable-512\.png/);assert.ok(readFileSync(new URL('../dist/assets/icon-192.png',import.meta.url)).length>1000);
+});
+test('v2.1 assets are local, compact and canvas lifecycle is guarded',()=>{
+  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),scene=readFileSync(new URL('../dist/scene.js',import.meta.url),'utf8'),css=readFileSync(new URL('../dist/style.css',import.meta.url),'utf8');
+  assert.doesNotMatch(css,/fonts\.googleapis\.com/);assert.match(css,/@font-face/);assert.match(app,/function stageSleep/);assert.match(app,/function stageWake/);assert.match(scene,/station\.webp/);assert.match(scene,/if\(w<2\|\|h<2\)return/);
+  assert.ok(readFileSync(new URL('../dist/assets/station.webp',import.meta.url)).length<300000);
 });
 test('Misi+ parity ends immediately while final-round survival opens Boss Sifir',()=>{
   const parity=make(7);parity.round=2;parity.players.filter(p=>p.role==='CREW').slice(0,3).forEach(p=>p.alive=false);skip(parity);assert.equal(parity.winner,'IMPOSTOR');

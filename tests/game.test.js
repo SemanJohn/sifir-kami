@@ -93,6 +93,14 @@ test('tie or skip produces no elimination',()=>{
   const g=make();assert.equal(skip(g).eliminated,null);
   const tiedSkip=make();tiedSkip.votes={0:'skip',1:'skip',2:1,3:1};assert.equal(voteResult(tiedSkip).eliminated,null);
 });
+test('impostor parity ends the mission in every mode',()=>{
+  for(const mode of ['classic','plus']){
+    const g=newGame(names(4),[2,3],()=>0,{mode});g.round=2;
+    const spy=g.players.find(p=>p.role==='IMPOSTOR'),crew=g.players.filter(p=>p.role==='CREW');
+    crew.slice(0,2).forEach(p=>p.alive=false);g.votes={[spy.id]:'skip',[crew[2].id]:'skip'};
+    voteResult(g);assert.equal(g.winner,'IMPOSTOR');assert.match(g.reason,/menyamai/);
+  }
+});
 test('impostor elimination wins; crew elimination excludes future participation',()=>{
   const g=make();g.votes={0:'skip',1:0,2:0,3:0};assert.equal(voteResult(g).eliminated.role,'IMPOSTOR');assert.equal(g.winner,'CREW');
   const crew=make();crew.votes={0:1,1:'skip',2:1,3:1};voteResult(crew);assert.equal(crew.winner,null);assert.equal(livePlayers(crew).length,3);assert.throws(()=>recordTurn(crew,1));nextRound(crew);play(crew);assert.equal(crew.battery,70);

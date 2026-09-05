@@ -2,9 +2,18 @@
 
 Permainan web 2D berbahasa Melayu untuk 3–8 pemain sekolah rendah. Satu peranti diserahkan bergilir. Mod Mini mengaktifkan 2 krew dan 1 penyamar untuk tepat 3 pemain; mod Klasik mempunyai seorang penyamar, manakala Misi+ mempunyai dua penyamar apabila ada 7–8 pemain.
 
-Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v2.0.0**.
+Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v2.1.0**.
 
-Kemas kini v2.0.0 menambah pemulihan misi, laporan kekal, animasi reaksi, peristiwa angkasa, Boss Sifir dan pilihan kekuatan sabotaj. Kemas kini v1.6.0 menambah galeri 20 watak comel dengan kombinasi warna dan aksesori.
+Kemas kini v2.1.0 meringankan muat turun, mengukuhkan paparan kanvas telefon dan membetulkan peraturan pariti semua mod. Kemas kini v2.0.0 menambah pemulihan misi, laporan kekal, animasi reaksi, peristiwa angkasa, Boss Sifir dan pilihan kekuatan sabotaj.
+
+## Prestasi & kestabilan v2.1.0
+
+- Latar stesen ditukar kepada WebP dan ikon dimampatkan tanpa menukar rupa asal.
+- Fon Baloo 2 dan DM Sans disimpan dalam aplikasi supaya paparan tidak bergantung pada Google Fonts atau rangkaian sekolah.
+- Ikon maskable khusus ditambah untuk pemasangan Home Screen Android.
+- Enjin animasi tidur apabila pentas tersembunyi dan hanya bangun selepas saiz kanvas sah, mengelakkan kanvas 0×0 pada telefon.
+- Konfeti mengikut lebar serta tinggi sebenar skrin, dan paparan bateri awal mengikut tetapan guru.
+- Penyamar menang apabila bilangannya menyamai krew dalam Mini, Klasik dan Misi+.
 
 ## Misi Angkasa v2.0.0
 
@@ -144,16 +153,16 @@ Service worker mengaktifkan cache baharu selepas semua aset dimuat turun. Aplika
 - `dist/merge.css` — papan nombor, tetapan dan laporan satu skrin.
 - `dist/game.js` — penjana matematik, skor, pusingan dan undian.
 - `dist/scene.js` — adegan Phaser, sprite watak asli dan animasi.
-- `dist/assets/station.png` — latar stesen yang dijana untuk projek ini.
-- `dist/assets/app-icon-master.png` — sumber ikon maskot Home Screen.
-- `dist/assets/icon-*-v1.5.png` — ikon Home Screen berversi.
+- `dist/assets/station.webp` — latar stesen ringan yang dijana untuk projek ini.
+- `dist/assets/icon-*.png` — ikon Home Screen biasa dan maskable.
+- `dist/assets/fonts/` — fon setempat serta lesen SIL OFL.
 - `dist/sw.js`, `dist/manifest.webmanifest` — cache dan metadata PWA.
 - `tests/game.test.js` — ujian logik dan simulasi permainan.
 
 ## Skop dan privasi
 
-Versi ini ialah **pass-and-play pada satu peranti**, bukan multiplayer online atau permainan bebas bergerak dengan bilik rangkaian. Watak pada stesen boleh digerakkan dengan mengetik lantai; tugasan dan undian ialah aliran permainan utama. Nama dan pilihan sifir disimpan pada peranti ini sahaja; peranan, undi dan sesi aktif tidak disimpan selepas muat semula. Tiada analitik atau penghantaran keputusan murid.
+Versi ini ialah **pass-and-play pada satu peranti**, bukan multiplayer online atau permainan bebas bergerak dengan bilik rangkaian. Watak pada stesen boleh digerakkan dengan mengetik lantai; tugasan dan undian ialah aliran permainan utama. Nama, pilihan sifir, sesi aktif dan laporan disimpan pada peranti ini sahaja. Tiada analitik atau penghantaran keputusan murid.
 
 Peranan disembunyikan pada paparan biasa, tetapi aplikasi sisi klien tidak boleh menghalang seseorang yang sengaja memeriksa memori dengan alat pembangun. Main mengikut peraturan bersama.
 
-Enjin: [Phaser](https://docs.phaser.io/) 3.90.0, lesen MIT, salinan lesen dalam `dist/vendor/PHASER-LICENSE.md`. Watak menggunakan sprite prosedural asal, bukan aset Among Us. Fon pilihan Baloo 2 dan DM Sans diminta melalui Google Fonts; pelayar menggunakan fon sistem jika tidak tersedia.
+Enjin: [Phaser](https://docs.phaser.io/) 3.90.0, lesen MIT, salinan lesen dalam `dist/vendor/PHASER-LICENSE.md`. Watak menggunakan sprite prosedural asal, bukan aset Among Us. Fon Baloo 2 dan DM Sans disimpan bersama aplikasi dengan lesen SIL OFL supaya tersedia di luar talian.

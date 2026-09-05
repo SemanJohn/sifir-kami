@@ -50,7 +50,7 @@ export function startStation(parent,onReady) {
   let reduced=systemReduced;
   class Station extends Phaser.Scene {
     constructor(){super('station');this.roster=[];this.actors=[];this.ready=false;this.playerHandler=null;this.eventId=null;}
-    preload(){this.load.image('station','./assets/station.png');}
+    preload(){this.load.image('station','./assets/station.webp');}
     create(){
       this.background=this.add.image(0,0,'station').setOrigin(.5).setDepth(-10);
       this.vignette=this.add.graphics().setDepth(-5);
@@ -69,7 +69,7 @@ export function startStation(parent,onReady) {
       onReady?.(this);
     }
     layoutScene(){
-      if(!this.background)return;const {width:w,height:h}=this.scale.gameSize,scale=Math.max(w/960,h/640);
+      if(!this.background)return;const {width:w,height:h}=this.scale.gameSize;if(w<2||h<2)return;const scale=Math.max(w/960,h/640);
       this.background.setPosition(w/2,h/2).setDisplaySize(960*scale,640*scale);
       this.vignette.clear().fillStyle(0x07101f,.2).fillRect(0,0,w,h).lineStyle(2,0x77d9cf,.22).strokeRoundedRect(10,10,Math.max(0,w-20),Math.max(0,h-20),20);this.eventOrb?.setPosition(w*.9,h*.14);this.applyEvent();
     }
@@ -106,7 +106,8 @@ export function startStation(parent,onReady) {
     reactAll(type='celebrate'){this.actors.forEach((actor,index)=>this.time.delayedCall(index*80,()=>this.react(actor.playerId,type)));}
     celebrate(){
       if(reduced)return;
-      for(let i=0;i<40;i++){const x=Phaser.Math.Between(40,920);const piece=this.add.rectangle(x,-20,6,11,Phaser.Display.Color.HexStringToColor(COLORS[i%COLORS.length]).color).setDepth(1000);this.tweens.add({targets:piece,y:700,x:x+Phaser.Math.Between(-80,80),angle:360,duration:2200+Math.random()*1500,delay:i*30,onComplete:()=>piece.destroy()});}
+      const {width:w,height:h}=this.scale.gameSize;if(w<2||h<2)return;
+      for(let i=0;i<40;i++){const x=Phaser.Math.Between(10,Math.max(20,w-10));const piece=this.add.rectangle(x,-20,6,11,Phaser.Display.Color.HexStringToColor(COLORS[i%COLORS.length]).color).setDepth(1000);this.tweens.add({targets:piece,y:h+40,x:x+Phaser.Math.Between(-80,80),angle:360,duration:2200+Math.random()*1500,delay:i*30,onComplete:()=>piece.destroy()});}
     }
   }
   const scene=new Station();
