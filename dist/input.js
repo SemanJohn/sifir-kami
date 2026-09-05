@@ -33,3 +33,15 @@ export function deviceClass(width,coarsePointer=false) {
   if(coarsePointer&&w<1100)return 'tablet';
   return 'desktop';
 }
+
+// Stable, separate home positions for every crew member, including tall phones.
+export function stationSlots(width,height,count){
+  if(width<2||height<2||count<1)return [];
+  const cols=height>width?2:Math.min(4,Math.ceil(count/2)),rows=Math.ceil(count/cols);
+  const top=Math.max(60,height*.28),bottom=height-24,cellH=(bottom-top)/rows,cellW=width*.9/cols;
+  const size=Math.max(16,Math.min(112,cellW*.64,(cellH-28)/1.3));
+  return Array.from({length:count},(_,i)=>{
+    const row=Math.floor(i/cols),items=Math.min(cols,count-row*cols),col=i%cols;
+    return {x:width*.05+width*.9*(col+.5)/items,y:top+cellH*(row+.5),size,labelWidth:cellW*.9};
+  });
+}

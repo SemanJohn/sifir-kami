@@ -5,6 +5,7 @@ body{background:radial-gradient(ellipse at 12% 0%,#18375970,transparent 55%),rad
 .primary{background:linear-gradient(160deg,#ffd18b,var(--amber));box-shadow:0 4px 16px #ffbf6910}
 button,select,input{touch-action:manipulation}
 .icon-button{border-radius:11px;background:#172338;border-color:#31435b;box-shadow:none}
+#help-button{font-family:system-ui,sans-serif;font-size:24px;line-height:1;padding:0}
 #stage-shell{position:relative;display:flex;flex:1;min-height:0;overflow:hidden;background:#101827}
 #stage{position:absolute;inset:0;width:100%;height:100%}
 #stage-shell.sheet-open #stage{pointer-events:none}
@@ -14,7 +15,7 @@ button,select,input{touch-action:manipulation}
 .lobby-hud-actions button{min-height:42px;display:flex;align-items:center;gap:7px;padding:7px 12px;border-color:#7894aa;background:#101d2ee8;box-shadow:0 5px 18px #02071270;font-size:14px;font-weight:700}
 .lobby-hud-actions button b{display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:var(--amber);color:#172237;font-size:21px;line-height:1}
 .lobby-hud-actions button i{display:grid;place-items:center;min-width:24px;height:24px;padding:0 5px;border-radius:12px;background:var(--mint);color:#10243a;font-size:12px;font-style:normal}
-#lobby-hud>p{max-width:245px;padding:8px 11px;border-radius:10px;background:#0a1423d9;color:#e6eef7;font-size:13px;line-height:1.25;text-align:right;box-shadow:0 5px 18px #02071270}
+.station-error{position:absolute;inset:20% 15% auto;z-index:2;text-align:center;font-size:14px;color:var(--ink)}
 #lobby-sheet{position:absolute;z-index:6;left:50%;bottom:12px;transform:translateX(-50%);width:min(520px,calc(100% - 24px));max-height:calc(100% - 76px);padding:16px;border:1px solid #668298;border-radius:18px;background:linear-gradient(160deg,#17283ef7,#101c30f7);box-shadow:0 15px 44px #020610c9;overflow:hidden;pointer-events:auto;touch-action:manipulation}
 .station-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
 .station-sheet-head>div>span,.player-edit-head label>span{display:block;color:var(--mint);font-size:12px;letter-spacing:.8px;text-transform:uppercase}
@@ -161,7 +162,7 @@ select:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
   .lobby-mode .station-panel{border-radius:15px}
   #lobby-hud{inset:9px 9px auto}
   .lobby-hud-actions button{min-height:39px;padding:6px 9px}
-  .lobby-hud-actions button span{display:none}
+  .lobby-hud-actions button span{display:inline}
   #lobby-hud>p{font-size:12px;max-width:205px;padding:7px 9px}
   #lobby-sheet{bottom:9px;width:calc(100% - 18px);padding:13px;border-radius:15px}
   .station-tables button{min-height:40px}

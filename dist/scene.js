@@ -1,4 +1,5 @@
 import {COLORS,CHARACTER_STYLES} from './game.js';
+import {stationSlots} from './input.js';
 
 // Original procedural game sprites: small space creatures, drawn once as textures.
 export function avatarTexture(index=0) {
@@ -52,17 +53,14 @@ export function startStation(parent,onReady) {
     constructor(){super('station');this.roster=[];this.actors=[];this.ready=false;this.playerHandler=null;this.eventId=null;}
     preload(){this.load.image('station','./assets/station.webp');}
     create(){
-      this.background=this.add.image(0,0,'station').setOrigin(.5).setDepth(-10);
+      this.background=this.textures.exists('station')?this.add.image(0,0,'station').setOrigin(.5).setDepth(-10):null;
+      if(!this.background){const notice=document.createElement('p');notice.className='station-error';notice.textContent='Latar tidak dapat dimuatkan. Buka semula aplikasi.';parent.append(notice);}
       this.vignette=this.add.graphics().setDepth(-5);
       this.eventOrb=this.add.text(0,0,'',{fontFamily:'Arial, sans-serif',fontSize:'28px',color:'#fff0b8'}).setOrigin(.5).setDepth(20).setAlpha(.8);
       avatars.forEach((canvas,i)=>this.textures.addCanvas('buddy'+i,canvas));
       this.ready=true;this.layoutScene();this.setRoster(this.roster);
       this.input.on('pointerdown',pointer=>{
-        if(!this.actors.length)return;
-        const a=this.actors[Math.floor(Math.random()*this.actors.length)];
-        if(reduced)return;
-        const {width,height}=this.scale.gameSize;
-        this.tweens.add({targets:a.container,x:Phaser.Math.Clamp(pointer.x,width*.12,width*.88),y:Phaser.Math.Clamp(pointer.y,height*.45,height*.82),duration:700,ease:'Sine.inOut'});
+        if(reduced||!this.playerHandler)return;
         const dot=this.add.circle(pointer.x,pointer.y,15,0xa8e2d2,.4);this.tweens.add({targets:dot,scale:2,alpha:0,duration:600,onComplete:()=>dot.destroy()});
       });
       this.scale.on('resize',()=>{this.layoutScene();this.setRoster(this.roster);});
@@ -82,17 +80,17 @@ export function startStation(parent,onReady) {
     }
     setRoster(players){
       this.roster=players;if(!this.ready)return;
+      const {width:w,height:h}=this.scale.gameSize;if(w<2||h<2)return;
       this.actors.forEach(a=>{this.tweens.killTweensOf([a.container,a.sprite]);a.container.destroy();});this.actors=[];
-      const {width:w,height:h}=this.scale.gameSize,n=players.length,cols=n<=4?2:n<=6?3:4,rows=Math.ceil(n/cols);
-      const areaW=Math.min(w*.76,760),left=(w-areaW)/2,rowGap=Math.min(h*.22,145),startY=h*(rows===1?.62:.54);
+      const slots=stationSlots(w,h,players.length);
       players.forEach((p,i)=>{
-        const row=Math.floor(i/cols),items=Math.min(cols,n-row*cols),col=i-row*cols,x=left+areaW*(col+1)/(items+1),y=startY+row*rowGap;
-        const spriteW=Math.max(68,Math.min(118,w/(cols+1)*.72,h/(rows+2)*.72)),spriteH=spriteW*1.12;
+        const {x,y,size:spriteW,labelWidth}=slots[i],spriteH=spriteW*1.12;
         const characterId=Number.isInteger(p.characterId)?p.characterId:p.id%avatars.length;
         const sprite=this.add.image(0,-spriteH*.34,'buddy'+characterId).setDisplaySize(spriteW,spriteH).setInteractive({useHandCursor:true});
-        const label=this.add.text(0,spriteH*.29,p.name,{fontFamily:'Arial, sans-serif',fontSize:`${Math.max(12,Math.min(17,w/32))}px`,fontStyle:'bold',color:'#ffffff',backgroundColor:'#172334dd',padding:{x:8,y:4}}).setOrigin(.5);
+        const label=this.add.text(0,spriteH*.34,p.name,{fontFamily:'Arial, sans-serif',fontSize:`${Math.max(12,Math.min(16,w/32))}px`,fontStyle:'bold',color:'#ffffff',backgroundColor:'#172334dd',align:'center',wordWrap:{width:labelWidth-12,useAdvancedWrap:true},padding:{x:6,y:4}}).setOrigin(.5);
         const container=this.add.container(x,y,[sprite,label]);container.setAlpha(p.alive===false?.4:1);container.setDepth(y);
-        sprite.on('pointerdown',(pointer,_x,_y,event)=>{event?.stopPropagation();this.playerHandler?.(p.id);if(!reduced)this.tweens.add({targets:sprite,scaleX:1.08,scaleY:1.08,duration:90,yoyo:true});});
+        const edit=(pointer,_x,_y,event)=>{event?.stopPropagation();this.playerHandler?.(p.id);};
+        sprite.on('pointerdown',edit);label.setInteractive({useHandCursor:true}).on('pointerdown',edit);
         if(!reduced)this.tweens.add({targets:sprite,y:sprite.y-7,duration:1000+100*i,yoyo:true,repeat:-1,ease:'Sine.inOut',delay:i*150});
         this.actors.push({playerId:p.id,container,sprite,label});
       });

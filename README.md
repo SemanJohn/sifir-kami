@@ -2,7 +2,15 @@
 
 Permainan web 2D berbahasa Melayu untuk 3–8 pemain sekolah rendah. Satu peranti diserahkan bergilir. Mod Mini mengaktifkan 2 krew dan 1 penyamar untuk tepat 3 pemain; mod Klasik mempunyai seorang penyamar, manakala Misi+ mempunyai dua penyamar apabila ada 7–8 pemain.
 
-Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v2.1.0**.
+Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v2.1.1**.
+
+## Pembaikan v2.1.1
+
+- Pulihkan fail latar lengkap yang terpotong semasa pemindahan ke GitHub.
+- Sahkan cap jari aset sebelum penerbitan; cache PWA menolak latar yang rosak.
+- Watak menggunakan petak berasingan mengikut saiz pentas. Ketikan lantai tidak lagi mengumpulkan watak di satu tempat; nama juga boleh ditekan untuk menyunting pemain.
+- Ringkaskan teks berulang dan kekalkan label Pemain/Sifir pada telefon.
+- Sahkan skrin asal bagi butang pertukaran giliran dan tolak jawapan Boss selepas masa tamat.
 
 Kemas kini v2.1.0 meringankan muat turun, mengukuhkan paparan kanvas telefon dan membetulkan peraturan pariti semua mod. Kemas kini v2.0.0 menambah pemulihan misi, laporan kekal, animasi reaksi, peristiwa angkasa, Boss Sifir dan pilihan kekuatan sabotaj.
 
