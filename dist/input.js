@@ -45,3 +45,11 @@ export function stationSlots(width,height,count){
     return {x:width*.05+width*.9*(col+.5)/items,y:top+cellH*(row+.5),size,labelWidth:cellW*.9};
   });
 }
+
+// Cap jari susunan pentas. Pembinaan semula watak hanya perlu apabila salah satu
+// daripada saiz kanvas, tetapan pergerakan atau senarai pemain benar-benar berubah.
+export function rosterSignature(width,height,reduced,players){
+  const list=Array.isArray(players)?players:[];
+  return JSON.stringify([Math.round(Number(width)||0),Math.round(Number(height)||0),!!reduced,
+    list.map(p=>[p?.id??null,String(p?.name??''),Number.isInteger(p?.characterId)?p.characterId:null,p?.alive!==false])]);
+}

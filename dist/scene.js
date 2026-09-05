@@ -1,5 +1,5 @@
 import {COLORS,CHARACTER_STYLES} from './game.js';
-import {stationSlots} from './input.js';
+import {stationSlots,rosterSignature} from './input.js';
 
 // Original procedural game sprites: small space creatures, drawn once as textures.
 export function avatarTexture(index=0) {
@@ -43,14 +43,20 @@ export function avatarTexture(index=0) {
   return canvas;
 }
 export const avatars=CHARACTER_STYLES.map((_,i)=>avatarTexture(i));
-export const avatarURLs=avatars.map(c=>c.toDataURL());
+// Pengekodan PNG mahal pada telefon lama. Setiap rupa hanya disiapkan apabila
+// benar-benar dipaparkan, kemudian disimpan supaya paparan seterusnya percuma.
+const avatarDataURLs=[];
+export function avatarURL(index=0){
+  const count=avatars.length,i=((Math.trunc(Number(index)||0)%count)+count)%count;
+  return avatarDataURLs[i]??=avatars[i].toDataURL();
+}
 
 export function startStation(parent,onReady) {
   if(!window.Phaser){parent.innerHTML='<p class="engine-error">Enjin kapal belum dimuatkan. Muat semula halaman untuk bermain.</p>';return null;}
   const systemReduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   let reduced=systemReduced;
   class Station extends Phaser.Scene {
-    constructor(){super('station');this.roster=[];this.actors=[];this.ready=false;this.playerHandler=null;this.eventId=null;}
+    constructor(){super('station');this.roster=[];this.actors=[];this.ready=false;this.playerHandler=null;this.eventId=null;this.rosterSignature=null;}
     preload(){this.load.image('station','./assets/station.webp');}
     create(){
       this.background=this.textures.exists('station')?this.add.image(0,0,'station').setOrigin(.5).setDepth(-10):null;
@@ -81,6 +87,11 @@ export function startStation(parent,onReady) {
     setRoster(players){
       this.roster=players;if(!this.ready)return;
       const {width:w,height:h}=this.scale.gameSize;if(w<2||h<2)return;
+      // Skrin baharu dan ketikan lobi kerap menghantar senarai yang sama. Membina
+      // semula setiap kali memutuskan animasi apungan dan membazir kuasa telefon.
+      const signature=rosterSignature(w,h,reduced,players);
+      if(signature===this.rosterSignature)return;
+      this.rosterSignature=signature;
       this.actors.forEach(a=>{this.tweens.killTweensOf([a.container,a.sprite]);a.container.destroy();});this.actors=[];
       const slots=stationSlots(w,h,players.length);
       players.forEach((p,i)=>{
@@ -96,7 +107,9 @@ export function startStation(parent,onReady) {
       });
     }
     react(playerId,type='celebrate'){
-      if(reduced)return;const actor=this.actors.find(item=>item.playerId===playerId);if(!actor)return;this.tweens.killTweensOf(actor.container);
+      if(reduced)return;const actor=this.actors.find(item=>item.playerId===playerId);if(!actor)return;
+      // Reaksi menggerakkan watak, jadi susunan tersimpan tidak lagi sah.
+      this.rosterSignature=null;this.tweens.killTweensOf(actor.container);
       if(type==='ejected'){this.tweens.add({targets:actor.container,x:this.scale.gameSize.width+actor.sprite.displayWidth,angle:270,alpha:0,duration:950,ease:'Back.in'});return;}
       if(type==='wrong'){const x=actor.container.x;this.tweens.add({targets:actor.container,x:x+10,duration:65,yoyo:true,repeat:3,onComplete:()=>actor.container.setX(x)});return;}
       const y=actor.container.y;this.tweens.add({targets:actor.container,y:y-28,scaleX:1.08,scaleY:1.08,duration:180,yoyo:true,repeat:1,ease:'Quad.out',onComplete:()=>actor.container.setY(y)});

@@ -1,6 +1,6 @@
 import {COLORS,CHARACTER_STYLES,DEFAULT_NAMES,SABOTAGE_MAX,validateConfig,normalizeCharacterIds,newGame,livePlayers,crewQuestion,anuQuestion,recordTurn,settleRound,voteResult,nextRound,shuffled,voteCandidates,canVoteFor,castVote,safeRound,crisisActive,checkTaskAnswer,chargeSabotage,spendSabotage,turnDurationFor,discussionDurationFor,resolveBoss} from './game.js';
 import {createAnswerInput,createActionGuard,deviceClass} from './input.js';
-import {avatarURLs,startStation} from './scene.js';
+import {avatarURL,startStation} from './scene.js';
 import {normalizeSettings,impostorCount,toggleTable,loadRosters,saveRoster} from './settings.js';
 import {tableStatsFor,buildReport,downloadCsv} from './learning.js';
 import {saveActiveSession,loadActiveSession,clearActiveSession,saveGameReport,loadReportHistory,clearReportHistory,reportHistorySummary} from './session.js';
@@ -28,7 +28,7 @@ $('#sound-button').addEventListener('click',()=>{soundOn=!soundOn;updateSound();
 $('#settings-button').addEventListener('click',()=>{if(screen==='LOBBY'){settingsPage=0;renderSettings();}});
 const helpPages=[
   ['Misi pasukan','<p><b>3–8 pemain · 1 peranti.</b> Tekan ＋ untuk menambah pemain. Tekan watak untuk mengubah nama, memilih rupa daripada 20 watak, atau membuang pemain.</p><p>Pilih sifir dalam skrin kapal. Selepas misi bermula, tekan dan tahan untuk melihat peranan.</p><p><b>Krew menang:</b> bateri 100%, semua penyamar ditangkap atau Boss Sifir ditewaskan.</p><p><b>Penyamar menang:</b> bateri 0%, menyamai krew atau pasukan gagal menewaskan Boss.</p>'],
-  ['Tugasan rahsia','<p>Lalai <b>25 saat</b> setiap giliran. Masa boleh diubah atau dimatikan.</p><p>Semua pemain, termasuk penyamar, menjawab <b>3 soalan darab yang sama jenis</b> dengan menaip sendiri.</p><p>Jika <b>ANU</b> diaktifkan, satu soalan setiap giliran meminta faktor yang hilang, contohnya 7 × ? = 56.</p><p>Gunakan ⌫ untuk memadam dan ✓ untuk menghantar jawapan.</p>'],
+  ['Tugasan rahsia','<p>Lalai <b>25 saat</b> setiap giliran. Masa boleh diubah atau dimatikan.</p><p>Semua pemain, termasuk penyamar, menjawab <b>3 soalan darab yang sama jenis</b> dengan menaip sendiri.</p><p>Jika <b>ANU</b> diaktifkan, satu soalan setiap giliran meminta faktor yang hilang, contohnya 7 × ? = 56.</p><p>Gunakan ⌫ untuk memadam dan ✓ untuk menghantar jawapan. Papan kekunci komputer juga boleh digunakan.</p><p>Selepas soalan ketiga, pemasa berhenti supaya setiap pemain sempat menamatkan gilirannya.</p>'],
   ['Bincang & undi','<p>Lalai <b>90 saat</b> untuk berbincang. Log tidak mendedahkan nama pelaku.</p><p>Setiap pemain aktif memilih pemain lain atau <b>Langkau</b>. Undi diri sendiri dilarang.</p><p>Undi seri atau Langkau terbanyak: tiada penyingkiran.</p><p>Pemain tersingkir menjadi pemerhati.</p>'],
   ['Mod Mini & Misi+','<p><b>3 pemain:</b> Mod Mini aktif secara automatik dengan 2 krew dan 1 penyamar. Pusingan pertama hanya menanda syak.</p><p>Mulai pusingan 2, jika krew tersingkir, penyamar menang kerana tinggal 1 lawan 1.</p><p><b>Misi+ 7–8 pemain:</b> dua penyamar saling mengenali. Krisis mulai pusingan 2; kombo krew 3/3 memberi +6%, jika tiada bateri −8%.</p>'],
   ['Tenaga sabotaj','<p>Lalai bateri <b>50%</b>. Cas maksimum semua krew aktif ialah <b>+45%</b> setiap pusingan.</p><p>Penyamar mengumpul tenaga untuk jawapan tepat: <b>+5%, +8%, +12%</b> mengikut streak.</p><p>Selepas tiga soalan, penyamar boleh menggunakan <b>10%, 25% atau semua tenaga</b>. Baki disimpan sehingga 50%.</p><p>Jika tiada serangan dibuat, log tidak memaparkan sebarang maklumat sabotaj.</p>'],
@@ -42,7 +42,7 @@ $('#help-prev').addEventListener('click',()=>{if(helpPage>0){helpPage--;renderHe
 $('#help-next').addEventListener('click',()=>{if(helpPage===helpPages.length-1)$('#help-dialog').close();else{helpPage++;renderHelp();}});
 
 function characterIdOf(p){return Number.isInteger(p.characterId)?p.characterId:(p.id??0)%CHARACTER_STYLES.length;}
-function avatar(p,cls='big-avatar'){return `<img class="${cls}" src="${avatarURLs[characterIdOf(p)]}" alt="" draggable="false">`;}
+function avatar(p,cls='big-avatar'){return `<img class="${cls}" src="${avatarURL(characterIdOf(p))}" alt="" draggable="false">`;}
 function roster(){return game?game.players:names.map((name,id)=>({id,name,characterId:characterIds[id],alive:true,color:COLORS[characterIds[id]]}));}
 function syncRoster(){station?.scene.setRoster(roster());}
 function stopClock(){clearInterval(clock);clock=null;epoch++;}
@@ -68,6 +68,10 @@ function stageLive(){const el=$('#stage');return !!el&&el.clientWidth>1&&el.clie
 function stageSleep(){const g=station?.game;if(!g||g.__asleep)return;g.__asleep=true;try{g.scale.stopListeners();g.loop.sleep();}catch{}}
 function stageWake(){const g=station?.game;if(!g||!stageLive())return;if(g.__asleep){g.__asleep=false;try{g.scale.startListeners();g.loop.wake();}catch{}}try{g.scale.refresh();}catch{}}
 function syncStage(){requestAnimationFrame(()=>stageLive()?stageWake():stageSleep());}
+// Pada telefon, pentas disembunyikan semasa bermain dan gelung Phaser tidur.
+// Reaksi yang dihantar ketika itu tidak akan tamat dan akan meletus sekaligus
+// apabila lobi kembali, jadi kesan hanya dimainkan bila pentas benar-benar dilihat.
+function stageEffect(run){const scene=station?.scene;if(scene?.ready&&stageLive())run(scene);}
 function checkpoint(){
   if(!game||game.winner||['LOBBY','SETTINGS','GAME_OVER','REPORT','HISTORY'].includes(screen))return;
   saveActiveSession({game,screen,roleIndex,turnIndex,turnOrder,voterIndex,voterOrder,meetingDeadline,lastVoteResult,task,bossTask});
@@ -163,7 +167,7 @@ function drawQuestion(){
   $('#task-body').innerHTML=`<div class="task-kicker">Soalan ${task.step+1} / 3 · ${q.anu?'Cari nilai ANU':'Taip jawapan'}</div><div class="typed-question"><div class="math-prompt" aria-live="polite">${prompt}</div><output id="typed-answer" aria-label="Jawapan ditaip">?</output></div><div class="keypad">${['1','2','3','4','5','6','7','8','9','⌫','0','✓'].map(k=>`<button class="task-key ${k==='⌫'?'key-delete':k==='✓'?'key-submit':''}" data-action="task-key" data-question="${questionId}" data-value="${k}" aria-label="${k==='⌫'?'Padam':k==='✓'?'Sahkan jawapan':k}">${k}</button>`).join('')}</div><div class="feedback" role="status"></div>`;
   if(document.documentElement.dataset.input==='keyboard')panel.querySelector('.task-key')?.focus({preventScroll:true});
 }
-function tickTask(){if(screen!=='TASK'||!task||game.config.timerOff)return;const left=Math.max(0,task.deadline-Date.now());$('#task-timer').textContent=`${Math.ceil(left/1000)}s`;$('#task-timer').classList.toggle('urgent',left<5000);$('#time-fill').style.width=`${left/(task.duration*10)}%`;if(left<=0)finishTask();}
+function tickTask(){if(screen!=='TASK'||!task||task.done||game.config.timerOff)return;const left=Math.max(0,task.deadline-Date.now());$('#task-timer').textContent=`${Math.ceil(left/1000)}s`;$('#task-timer').classList.toggle('urgent',left<5000);$('#time-fill').style.width=`${left/(task.duration*10)}%`;if(left<=0)finishTask();}
 function logCurrentAnswer(given,correct){
   if(task.recorded||!task.question)return;task.recorded=true;const p=currentPlayer(),q=task.question;
   game.records.push({playerId:p.id,playerName:p.name,role:p.role,round:game.round,kind:'crew',mode:q.mode,anu:!!q.anu,table:q.table,multiplier:q.multiplier??null,answer:q.answer,given,correct,ms:Math.round(performance.now()-task.questionStarted)});
@@ -193,8 +197,18 @@ function answer(value){
   checkpoint();const token=epoch;
   setTimeout(()=>{if(token!==epoch||screen!=='TASK')return;task.step++;if(task.step===3){task.done=true;neutralTask();}else drawQuestion();},850);
 }
+// Kiraan giliran hanya mengehadkan masa menjawab. Selepas soalan ketiga, semua
+// peranan mendapat paparan dan masa keputusan yang sama supaya pilihan sabotaj
+// penyamar tidak dipotong pemasa dan tempoh giliran tidak membocorkan peranan.
+function freezeTaskTimer(){
+  clearInterval(clock);clock=null;
+  if(!task)return;task.deadline=Infinity;
+  const pill=$('#task-timer'),fill=$('#time-fill');
+  if(pill){pill.textContent='✓';pill.classList.remove('urgent');pill.setAttribute('aria-label','Masa menjawab tamat');}
+  if(fill)fill.style.width='100%';
+}
 function neutralTask(){
-  $('#task-body').className='';const spy=currentPlayer().role==='IMPOSTOR';
+  freezeTaskTimer();$('#task-body').className='';const spy=currentPlayer().role==='IMPOSTOR';
   $('#task-body').innerHTML=spy?`<div class="task-end-neutral sabotage-console"><div class="eyebrow">Konsol rahsia penyamar</div><h2>${fmt(task.sabotageBank)}%</h2><div class="sabotage-meter" role="progressbar" aria-label="Tenaga sabotaj" aria-valuenow="${task.sabotageBank}" aria-valuemin="0" aria-valuemax="${SABOTAGE_MAX}"><i style="width:${task.sabotageBank/SABOTAGE_MAX*100}%"></i></div><p>Pilih kekuatan serangan. Baki tenaga akan disimpan.</p><div class="sabotage-choices"><button class="danger-button" data-action="task-sabotage" data-amount="10" ${task.sabotageBank<10?'disabled':''}>−10%</button><button class="danger-button" data-action="task-sabotage" data-amount="25" ${task.sabotageBank<25?'disabled':''}>−25%</button><button class="danger-button" data-action="task-sabotage" data-amount="all" ${task.sabotageBank<=0?'disabled':''}>Semua · −${fmt(task.sabotageBank)}%</button></div><button class="secondary finish-turn" data-action="task-finish">Simpan semua tenaga</button></div>`:'<div class="task-end-neutral"><div class="orbit-symbol">✦</div><h2>Tugasan selesai</h2><button class="primary finish-turn" data-action="task-finish">Tamat giliran</button></div>';
   checkpoint();
 }
@@ -217,7 +231,7 @@ function batteryPanel(){const h=game.history.at(-1);return `<div class="battery-
 function renderCommand(){
   base('COMMAND');header('Laporan kapal','',roundBadge());
   panel.innerHTML=`<section class="panel command-panel">${eventCard()}${batteryPanel()}<div class="log-list">${game.logs.map(l=>`<div class="log ${l.kind}"><span class="log-icon">${l.kind==='warn'?'⚠':'✧'}</span><span>${escapeHTML(l.text)}</span></div>`).join('')}</div><button class="primary bottom-action" data-action="${game.winner?'game-over':'meeting'}">${game.winner?'Keputusan misi':'Bincang & undi'}</button></section>`;
-  const delta=game.history.at(-1)?.delta||0;station?.scene.reactAll?.(delta>=0?'celebrate':'wrong');
+  const delta=game.history.at(-1)?.delta||0;stageEffect(scene=>scene.reactAll?.(delta>=0?'celebrate':'wrong'));
 }
 function renderMeeting(resume=false){
   base('MEETING');header('Mesyuarat krew','',roundBadge());const duration=discussionDurationFor(game);if(!resume||!meetingDeadline)meetingDeadline=Date.now()+duration*1000;const initial=Math.max(0,Math.ceil((meetingDeadline-Date.now())/1000));
@@ -244,7 +258,7 @@ function renderVoteResult(){
   base('VOTE_RESULT');const r=lastVoteResult,p=r.eliminated||r.warned;
   header('Keputusan undian','',roundBadge());
   panel.innerHTML=`<section class="panel private-card">${p?avatar(p):'<div class="orbit-symbol">◇</div>'}<h2>${p?escapeHTML(p.name):'Tiada penyingkiran'}</h2><p>${r.warned?'Ditanda syak sahaja. Semua kekal aktif dan peranan masih rahsia.':p?(p.role==='IMPOSTOR'?game.winner?'Dia PENYAMAR! Semua penyamar ditangkap.':'Dia PENYAMAR! Masih ada seorang lagi.':'Dia KREW ANGKASA. Kini menjadi pemerhati.'):(r.tied?'Undian seri. Semua pemain kekal aktif.':'Pasukan memilih untuk melangkau undian.')}</p><div class="result-list">${Object.entries(r.counts).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]).map(([id,n])=>`<div class="result-row"><span>${id==='skip'?'Langkau':escapeHTML(game.players.find(p=>p.id===Number(id)).name)}</span><b>${n} undi</b></div>`).join('')}</div><button class="primary" data-action="${game.winner?'game-over':game.bossPending?'boss-intro':'round-next'}">${game.winner?'Lihat keputusan misi':game.bossPending?'Hadapi Boss Sifir':'Teruskan pusingan seterusnya'}</button></section>`;
-  if(r.eliminated)station?.scene.react?.(r.eliminated.id,'ejected');
+  if(r.eliminated)stageEffect(scene=>scene.react?.(r.eliminated.id,'ejected'));
 }
 function renderBossIntro(){
   base('BOSS_INTRO');header('Boss Sifir','',`Final · ${roundBadge()}`);
@@ -272,7 +286,7 @@ function renderGameOver(){
   header('Misi selesai','',crew?'Krew menang':'Penyamar menang');
   saveGameReport(game);clearActiveSession();pendingSession=null;
   panel.innerHTML=`<section class="panel private-card game-over-panel"><h2>${crew?'Hebat, pasukan!':'Liciknya penyamar!'}</h2><p>${escapeHTML(game.reason)}</p><div class="winner-avatars">${spies.map(p=>avatar(p)).join('')}</div><p><b style="color:var(--red)">${spies.map(p=>escapeHTML(p.name)).join(' & ')}</b> ialah penyamar.</p><div class="stats-grid"><div class="stat"><strong>${fmt(game.battery)}%</strong><span>Bateri akhir</span></div><div class="stat"><strong>${correct}/${total}</strong><span>Sifir betul</span></div><div class="stat"><strong>${game.round}/${game.maxRounds}</strong><span>Pusingan</span></div></div><div class="end-actions"><button class="primary" data-action="report">Laporan guru</button><button class="secondary" data-action="replay">Main semula · pemain sama</button><button class="secondary" data-action="lobby">Ubah pemain</button></div></section>`;
-  station?.scene.celebrate();
+  stageEffect(scene=>scene.celebrate());
 }
 function renderHistory(){
   const entries=loadReportHistory(),summary=reportHistorySummary(entries),pages=Math.max(1,Math.ceil(summary.players.length/4));historyPage=Math.min(historyPage,pages-1);base('HISTORY');header('Rekod pembelajaran','',`${entries.length} misi`);
@@ -325,14 +339,13 @@ document.addEventListener('pointerup',()=>{clearPressed();answerInput.cancel();}
 document.addEventListener('pointercancel',()=>{clearPressed();answerInput.cancel();});
 panel.addEventListener('keydown',e=>{
   if(!['TASK','BOSS'].includes(screen)||$('.safety-curtain'))return;
-  if(/^[0-9]$/.test(e.key)||['Backspace','Enter'].includes(e.key)){e.preventDefault();if(!e.repeat){const key=e.key==='Backspace'?'⌫':e.key==='Enter'?'✓':e.key;screen==='BOSS'?enterBossDigit(key):enterDigit(key);}return;}
   const b=e.target.closest('.answer,.task-key,.boss-key');
-  if(!b||!['Enter',' '].includes(e.key))return;e.preventDefault();
-  if(!e.repeat&&!b.disabled)answerInput.press(Number(b.dataset.question),b.dataset.value,'key:'+e.key);
+  if(!b||e.key!==' ')return;e.preventDefault();
+  if(!e.repeat&&!b.disabled)answerInput.press(Number(b.dataset.question),b.dataset.value,'key:space');
 });
 panel.addEventListener('keyup',e=>{
-  const b=e.target.closest('.answer,.task-key,.boss-key');if(!b||!['Enter',' '].includes(e.key))return;e.preventDefault();
-  if(!b.disabled&&answerInput.release(Number(b.dataset.question),b.dataset.value,'key:'+e.key)){if(b.dataset.action==='boss-key')enterBossDigit(b.dataset.value);else activateTaskButton(b);}
+  const b=e.target.closest('.answer,.task-key,.boss-key');if(!b||e.key!==' ')return;e.preventDefault();
+  if(!b.disabled&&answerInput.release(Number(b.dataset.question),b.dataset.value,'key:space')){if(b.dataset.action==='boss-key')enterBossDigit(b.dataset.value);else activateTaskButton(b);}
 });
 panel.addEventListener('click',e=>{
   const b=e.target.closest('[data-action]');if(!b||b.disabled)return;const action=b.dataset.action;
@@ -402,6 +415,19 @@ stageShell.addEventListener('click',e=>{
 });
 stageShell.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='stage-player-name'){e.preventDefault();savePlayerName();}});
 
+// Papan kekunci fizikal jarang mempunyai fokus di dalam panel: selepas soalan
+// baharu dilukis, fokus dilepaskan supaya papan kekunci telefon tidak terbuka.
+// Kekunci nombor perlu didengar pada dokumen supaya guru boleh menaip terus.
+function handleTypedKey(e){
+  if(!['TASK','BOSS'].includes(screen)||$('.safety-curtain')||$('dialog[open]')||e.metaKey||e.ctrlKey||e.altKey)return;
+  const node=e.target;
+  if(node&&(node.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(node.tagName)))return;
+  if(!/^[0-9]$/.test(e.key)&&!['Backspace','Enter'].includes(e.key))return;
+  e.preventDefault();if(e.repeat)return;
+  const key=e.key==='Backspace'?'⌫':e.key==='Enter'?'✓':e.key;
+  if(screen==='BOSS')enterBossDigit(key);else enterDigit(key);
+}
+document.addEventListener('keydown',handleTypedKey);
 function curtain(){
   hideRole();answerInput.cancel();clearPressed();
   if(!['TASK','VOTE'].includes(screen)||$('.safety-curtain'))return;
