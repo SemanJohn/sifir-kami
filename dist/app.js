@@ -4,6 +4,7 @@ import {avatarURL,startStation} from './scene.js';
 import {normalizeSettings,impostorCount,toggleTable,loadRosters,saveRoster} from './settings.js';
 import {tableStatsFor,buildReport,downloadCsv} from './learning.js';
 import {saveActiveSession,loadActiveSession,clearActiveSession,saveGameReport,loadReportHistory,clearReportHistory,reportHistorySummary} from './session.js';
+import {createAudio,musicForScreen} from './audio.js';
 
 const $=s=>document.querySelector(s);
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -12,7 +13,7 @@ let names=[...DEFAULT_NAMES],tables=[2,3,4,5],characterIds=normalizeCharacterIds
 let settings=normalizeSettings(),settingsPage=0,reportPage=0,reportTablePage=0;
 try {const saved=JSON.parse(localStorage.getItem('sifir-kami-config'));if(saved&&!validateConfig(saved.names,saved.tables)){names=saved.names;tables=saved.tables;characterIds=normalizeCharacterIds(saved.characterIds,names.length);}} catch {}
 try {settings=normalizeSettings(JSON.parse(localStorage.getItem('sifir-kami-settings')||'{}'));}catch{}
-let game=null,screen='LOBBY',roleIndex=0,turnIndex=0,turnOrder=[],voterIndex=0,voterOrder=[],selectedVote=null,hasSeenRole=false,holding=false,task=null,bossTask=null,clock=null,epoch=0,meetingDeadline=0,lastVoteResult=null,soundOn=false,audioCtx=null,station=null;
+let game=null,screen='LOBBY',roleIndex=0,turnIndex=0,turnOrder=[],voterIndex=0,voterOrder=[],selectedVote=null,hasSeenRole=false,holding=false,task=null,bossTask=null,clock=null,epoch=0,meetingDeadline=0,lastVoteResult=null,soundOn=false,station=null;
 let helpPage=0,questionId=0,lobbySheet=null,editingPlayerId=null,editingCharacterId=null,historyPage=0,pendingSession=loadActiveSession();
 let appRegistration=null,appUpdatePending=false,appRefreshing=false;
 const answerInput=createAnswerInput();
@@ -22,9 +23,13 @@ app.innerHTML=`<div class="page-intro"><h1 id="page-title">Sifir Kami</h1><span 
 const panel=$('#mission-panel');
 const stageShell=$('#stage-shell');
 
-function sound(){if(!soundOn)return;try{audioCtx??=new (window.AudioContext||window.webkitAudioContext)();audioCtx.resume();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.type='sine';o.frequency.setValueAtTime(620,audioCtx.currentTime);o.frequency.exponentialRampToValueAtTime(420,audioCtx.currentTime+.08);g.gain.setValueAtTime(.035,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.1);o.start();o.stop(audioCtx.currentTime+.11);}catch{}}
+const audio=createAudio();
+function sound(name='tap'){audio.play(name);}
 function updateSound(){const b=$('#sound-button');b.setAttribute('aria-pressed',String(soundOn));b.setAttribute('aria-label',soundOn?'Matikan bunyi':'Hidupkan bunyi');b.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 5 6 9H3v6h3l5 4V5Z"/>${soundOn?'<path d="M15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/>':'<path d="m16 9 5 6m0-6-5 6"/>'}</svg>`;}
-$('#sound-button').addEventListener('click',()=>{soundOn=!soundOn;updateSound();sound();});updateSound();
+$('#sound-button').addEventListener('click',()=>{
+  soundOn=!soundOn;settings=normalizeSettings({...settings,sound:soundOn});persist();
+  audio.setEnabled(soundOn);updateSound();audio.setMusic(musicForScreen(screen));if(soundOn)sound();
+});updateSound();
 $('#settings-button').addEventListener('click',()=>{if(screen==='LOBBY'){settingsPage=0;renderSettings();}});
 const helpPages=[
   ['Misi pasukan','<p><b>3–8 pemain · 1 peranti.</b> Tekan ＋ untuk menambah pemain. Tekan watak untuk mengubah nama, memilih rupa daripada 20 watak, atau membuang pemain.</p><p>Pilih sifir dalam skrin kapal. Selepas misi bermula, tekan dan tahan untuk melihat peranan.</p><p><b>Krew menang:</b> bateri 100%, semua penyamar ditangkap atau Boss Sifir ditewaskan.</p><p><b>Penyamar menang:</b> bateri 0%, menyamai krew atau pasukan gagal menewaskan Boss.</p>'],
@@ -33,7 +38,7 @@ const helpPages=[
   ['Mod Mini & Misi+','<p><b>3 pemain:</b> Mod Mini aktif secara automatik dengan 2 krew dan 1 penyamar. Pusingan pertama hanya menanda syak.</p><p>Mulai pusingan 2, jika krew tersingkir, penyamar menang kerana tinggal 1 lawan 1.</p><p><b>Misi+ 7–8 pemain:</b> dua penyamar saling mengenali. Krisis mulai pusingan 2; kombo krew 3/3 memberi +6%, jika tiada bateri −8%.</p>'],
   ['Tenaga sabotaj','<p>Lalai bateri <b>50%</b>. Cas maksimum semua krew aktif ialah <b>+45%</b> setiap pusingan.</p><p>Penyamar mengumpul tenaga untuk jawapan tepat: <b>+5%, +8%, +12%</b> mengikut streak.</p><p>Selepas tiga soalan, penyamar boleh menggunakan <b>10%, 25% atau semua tenaga</b>. Baki disimpan sehingga 50%.</p><p>Jika tiada serangan dibuat, log tidak memaparkan sebarang maklumat sabotaj.</p>'],
   ['Peristiwa & Boss','<p>Setiap pusingan mempunyai satu peristiwa angkasa yang digunakan kepada semua pemain.</p><p>Jika penyamar masih hidup selepas undian terakhir, pasukan menghadapi <b>Boss Sifir</b>.</p><p>Jawab 3 soalan dalam 30 saat. Sekurang-kurangnya 2 jawapan tepat diperlukan untuk kemenangan krew.</p>'],
-  ['Untuk guru','<p>Buka <b>⚙ Tetapan guru</b> dari lobi untuk mod, pemasa, soalan adaptif dan kumpulan tersimpan.</p><p>Sehingga <b>30 laporan misi</b> disimpan pada peranti dan boleh dieksport sebagai CSV gabungan.</p><p>Misi yang terganggu juga disimpan. Gunakan <b>Sambung misi</b> di lobi untuk kembali pada titik selamat.</p>']
+  ['Untuk guru','<p>Buka <b>⚙ Tetapan guru</b> dari lobi untuk mod, pemasa, soalan adaptif dan kumpulan tersimpan.</p><p>Sehingga <b>30 laporan misi</b> disimpan pada peranti dan boleh dieksport sebagai CSV gabungan.</p><p>Misi yang terganggu juga disimpan. Gunakan <b>Sambung misi</b> di lobi untuk kembali pada titik selamat.</p><p>Butang <b>🔊</b> di atas menghidupkan kesan bunyi dan muzik ringan. Muzik hanya bermain di lobi dan ketika mesyuarat, tidak semasa murid menjawab. Pilihan ini diingati pada peranti.</p>']
 ];
 function renderHelp(){const [title,body]=helpPages[helpPage];$('#help-title').textContent=title;$('#help-body').innerHTML=body;$('#help-page').textContent=`${helpPage+1} / ${helpPages.length}`;$('#help-prev').disabled=helpPage===0;$('#help-next').textContent=helpPage===helpPages.length-1?'Selesai':'Seterusnya';}
 $('#help-button').addEventListener('click',()=>{helpPage=0;renderHelp();$('#help-dialog').showModal();});
@@ -59,6 +64,7 @@ function base(next,{privateView=false}={}){
   $('#lobby-hud').hidden=next!=='LOBBY';$('#lobby-sheet').hidden=true;
   station?.scene.setPlayerHandler(next==='LOBBY'?openPlayerEditor:null);
   $('.safety-curtain')?.remove();
+  audio.setMusic(musicForScreen(next));
   syncStage();
   queueMicrotask(checkpoint);
 }
@@ -200,6 +206,7 @@ function answer(value){
   if($('#typed-answer'))$('#typed-answer').className=correct?'is-correct':'is-wrong';
   panel.querySelector('.task-panel')?.classList.add(correct?'answer-correct':'answer-wrong');
   $('.feedback').innerHTML=correct?`${game.event?.id==='METEOR'?'<span class="meteor-burst">✦ ✦</span> ':''}<b>✓ Tepat!</b>${task.combo>1?` · Kombo ×${task.combo}`:''}`:`Jawapannya <b>${q.table} × ${q.multiplier} = ${q.anu?q.product:q.answer}</b>.`;
+  sound(correct?'correct':'wrong');
   try{navigator.vibrate?.(correct?18:[28,35,28]);}catch{}
   checkpoint();const token=epoch;
   setTimeout(()=>{if(token!==epoch||screen!=='TASK')return;task.step++;if(task.step===3){task.done=true;neutralTask();}else drawQuestion();},850);
@@ -265,7 +272,7 @@ function renderVoteResult(){
   base('VOTE_RESULT');const r=lastVoteResult,p=r.eliminated||r.warned;
   header('Keputusan undian','',roundBadge());
   panel.innerHTML=`<section class="panel private-card">${p?avatar(p):'<div class="orbit-symbol">◇</div>'}<h2>${p?escapeHTML(p.name):'Tiada penyingkiran'}</h2><p>${r.warned?'Ditanda syak sahaja. Semua kekal aktif dan peranan masih rahsia.':p?(p.role==='IMPOSTOR'?game.winner?'Dia PENYAMAR! Semua penyamar ditangkap.':'Dia PENYAMAR! Masih ada seorang lagi.':'Dia KREW ANGKASA. Kini menjadi pemerhati.'):(r.tied?'Undian seri. Semua pemain kekal aktif.':'Pasukan memilih untuk melangkau undian.')}</p><div class="result-list">${Object.entries(r.counts).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]).map(([id,n])=>`<div class="result-row"><span>${id==='skip'?'Langkau':escapeHTML(game.players.find(p=>p.id===Number(id)).name)}</span><b>${n} undi</b></div>`).join('')}</div><button class="primary" data-action="${game.winner?'game-over':game.bossPending?'boss-intro':'round-next'}">${game.winner?'Lihat keputusan misi':game.bossPending?'Hadapi Boss Sifir':'Teruskan pusingan seterusnya'}</button></section>`;
-  if(r.eliminated)stageEffect(scene=>scene.react?.(r.eliminated.id,'ejected'));
+  if(r.eliminated){sound('eject');stageEffect(scene=>scene.react?.(r.eliminated.id,'ejected'));}
 }
 function renderBossIntro(){
   base('BOSS_INTRO');header('Boss Sifir','',`Final · ${roundBadge()}`);
@@ -282,7 +289,7 @@ function enterBossDigit(key){if(screen!=='BOSS'||bossTask.locked)return;if(key==
 function answerBoss(value){
   if(screen!=='BOSS'||!bossTask||bossTask.locked)return;if(Date.now()>=bossTask.deadline){finishBoss();return;}bossTask.locked=true;answerInput.cancel();const correct=value===bossTask.question.answer;if(correct)bossTask.correct++;
   panel.querySelectorAll('.boss-key').forEach(button=>button.disabled=true);$('#typed-answer').className=correct?'is-correct':'is-wrong';$('.feedback').innerHTML=correct?'<b>✓ Tepat! Serangan berjaya.</b>':`Jawapannya <b>${bossTask.question.answer}</b>.`;
-  panel.querySelector('.task-panel')?.classList.add(correct?'answer-correct':'answer-wrong');checkpoint();const token=epoch;
+  panel.querySelector('.task-panel')?.classList.add(correct?'answer-correct':'answer-wrong');sound(correct?'correct':'wrong');checkpoint();const token=epoch;
   setTimeout(()=>{if(token!==epoch||screen!=='BOSS')return;bossTask.step++;if(bossTask.step>=3)finishBoss();else drawBossQuestion();},800);
 }
 function tickBoss(){if(screen!=='BOSS'||!bossTask)return;const left=Math.max(0,bossTask.deadline-Date.now());$('#boss-timer').textContent=`${Math.ceil(left/1000)}s`;if(left<=0)finishBoss();}
@@ -293,7 +300,7 @@ function renderGameOver(){
   header('Misi selesai','',crew?'Krew menang':'Penyamar menang');
   saveGameReport(game);clearActiveSession();pendingSession=null;
   panel.innerHTML=`<section class="panel private-card game-over-panel"><h2>${crew?'Hebat, pasukan!':'Liciknya penyamar!'}</h2><p>${escapeHTML(game.reason)}</p><div class="winner-avatars">${spies.map(p=>avatar(p)).join('')}</div><p><b style="color:var(--red)">${spies.map(p=>escapeHTML(p.name)).join(' & ')}</b> ialah penyamar.</p><div class="stats-grid"><div class="stat"><strong>${fmt(game.battery)}%</strong><span>Bateri akhir</span></div><div class="stat"><strong>${correct}/${total}</strong><span>Sifir betul</span></div><div class="stat"><strong>${game.round}/${game.maxRounds}</strong><span>Pusingan</span></div></div><div class="end-actions"><button class="primary" data-action="report">Laporan guru</button><button class="secondary" data-action="replay">Main semula · pemain sama</button><button class="secondary" data-action="lobby">Ubah pemain</button></div></section>`;
-  stageEffect(scene=>scene.celebrate());
+  sound(crew?'win':'lose');stageEffect(scene=>scene.celebrate());
 }
 function renderHistory(){
   const entries=loadReportHistory(),summary=reportHistorySummary(entries),pages=Math.max(1,Math.ceil(summary.players.length/4));historyPage=Math.min(historyPage,pages-1);base('HISTORY');header('Rekod pembelajaran','',`${entries.length} misi`);
@@ -332,7 +339,7 @@ panel.addEventListener('change',e=>{
 });
 let lastPointerAt=-Infinity;
 function clearPressed(){panel.querySelectorAll('.pressed').forEach(b=>b.classList.remove('pressed'));}
-document.addEventListener('pointerdown',()=>{lastPointerAt=Date.now();document.documentElement.dataset.input='pointer';});
+document.addEventListener('pointerdown',()=>{lastPointerAt=Date.now();document.documentElement.dataset.input='pointer';audio.resume();});
 document.addEventListener('keydown',e=>{if(['Tab','Enter',' '].includes(e.key))document.documentElement.dataset.input='keyboard';});
 panel.addEventListener('pointerdown',e=>{
   const b=e.target.closest('.answer,.task-key,.boss-key'),blocked=screen==='TASK'?task?.locked:screen==='BOSS'?bossTask?.locked:true;if(!b||b.disabled||e.button!==0||blocked)return;
@@ -432,6 +439,7 @@ function handleTypedKey(e){
   if(!/^[0-9]$/.test(e.key)&&!['Backspace','Enter'].includes(e.key))return;
   e.preventDefault();if(e.repeat)return;
   const key=e.key==='Backspace'?'⌫':e.key==='Enter'?'✓':e.key;
+  sound();
   if(screen==='BOSS')enterBossDigit(key);else enterDigit(key);
 }
 document.addEventListener('keydown',handleTypedKey);
@@ -441,7 +449,7 @@ function curtain(){
   const c=document.createElement('div');c.className='safety-curtain';c.innerHTML='<div class="orbit-symbol">◇</div><h2>Paparan dilindungi</h2><p>Pastikan peranti masih dengan pemain yang sama.<br>Masa tugasan terus berjalan.</p><button class="primary">Buka semula paparan</button>';
   c.querySelector('button').addEventListener('click',()=>{c.remove();if(screen==='TASK')tickTask();});document.body.append(c);
 }
-document.addEventListener('visibilitychange',()=>{if(document.hidden){checkpoint();curtain();}else{if(screen==='TASK')tickTask();if(screen==='BOSS')tickBoss();checkAppUpdate();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){checkpoint();curtain();audio.suspend();}else{audio.resume();if(screen==='TASK')tickTask();if(screen==='BOSS')tickBoss();checkAppUpdate();}});
 window.addEventListener('blur',()=>{hideRole();answerInput.cancel();clearPressed();if(screen==='TASK'||screen==='VOTE')curtain();});
 window.addEventListener('pagehide',()=>{hideRole();checkpoint();});
 window.addEventListener('beforeunload',checkpoint);
@@ -457,6 +465,7 @@ function fitViewport(){
 }
 window.addEventListener('resize',fitViewport);window.visualViewport?.addEventListener('resize',fitViewport);
 document.addEventListener('focusin',fitViewport);document.addEventListener('focusout',()=>requestAnimationFrame(fitViewport));
+soundOn=settings.sound;audio.setEnabled(soundOn);updateSound();
 applySettings();fitViewport();renderLobby();station=startStation($('#stage'),s=>{s.setMotion(settings.reduceMotion);s.setEvent(game?.event?.id||null);s.setRoster(roster());s.setPlayerHandler(openPlayerEditor);if($('#layout').classList.contains('private-mode'))s.scene.pause();syncStage();});
 if('serviceWorker' in navigator){
   let controlled=!!navigator.serviceWorker.controller;

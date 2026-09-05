@@ -2,7 +2,19 @@
 
 Permainan web 2D berbahasa Melayu untuk 3–8 pemain sekolah rendah. Satu peranti diserahkan bergilir. Mod Mini mengaktifkan 2 krew dan 1 penyamar untuk tepat 3 pemain; mod Klasik mempunyai seorang penyamar, manakala Misi+ mempunyai dua penyamar apabila ada 7–8 pemain.
 
-Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v2.2.0**.
+Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v2.3.0**.
+
+## Bunyi & muzik v2.3.0
+
+- **Kesan bunyi kini benar-benar kedengaran.** Nada lama memuncak pada 0.035 (−29 dBFS) — hampir tidak dapat didengar pada pembesar suara telefon di dalam kelas. Kesan baharu memuncak sekitar −14 hingga −16 dBFS tanpa keratan (*clipping*).
+- **Setiap peristiwa mempunyai bunyi tersendiri:** ketikan, jawapan betul (dua nada menaik), jawapan salah, penyingkiran pemain, serta muzik kemenangan dan kekalahan.
+- **Muzik latar sintetik.** Dijana sepenuhnya oleh Web Audio — **0 bait** ditambah pada muat turun, kekal berfungsi luar talian dan tiada isu hak cipta. Gelung lembut di lobi, gelung lebih tegang ketika mesyuarat.
+- **Muzik senyap ketika murid menjawab.** Skrin tugasan, serahan peranti, peranan rahsia dan undian kekal tanpa muzik supaya tumpuan tidak terganggu.
+- **Suis Ring/Silent iPhone.** iOS menyenyapkan Web Audio apabila suis senyap dihidupkan. Aplikasi kini memainkan trek senyap melalui elemen `<audio>` untuk menukar kategori sesi audio iOS. Trek itu dijana dalam ingatan, bukan fail — tiada aset baharu.
+- **Pilihan bunyi diingati** pada peranti, jadi guru tidak perlu menghidupkannya setiap kali.
+- Menaip pada papan kekunci komputer kini turut berbunyi seperti papan nombor pada skrin.
+
+Muzik dikawal oleh butang bunyi yang sedia ada. Modul baharu `dist/audio.js` ditambah ke senarai cache luar talian.
 
 ## Pembaikan v2.2.0
 
@@ -170,6 +182,7 @@ Service worker mengaktifkan cache baharu selepas semua aset dimuat turun. Aplika
 - `dist/settings.js` — tetapan guru dan kumpulan setempat.
 - `dist/learning.js` — statistik adaptif, laporan dan CSV.
 - `dist/session.js` — pemulihan misi dan sejarah laporan setempat.
+- `dist/audio.js` — kesan bunyi dan muzik sintetik Web Audio (tiada fail audio).
 - `dist/merge.css` — papan nombor, tetapan dan laporan satu skrin.
 - `dist/game.js` — penjana matematik, skor, pusingan dan undian.
 - `dist/scene.js` — adegan Phaser, sprite watak asli dan animasi.
