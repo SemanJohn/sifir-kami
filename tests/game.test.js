@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {CHARACTER_STYLES,SABOTAGE_MAX,newGame,crewQuestion,anuQuestion,checkTaskAnswer,sabotageReward,chargeSabotage,spendSabotage,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,normalizeCharacterIds,voteCandidates,canVoteFor,castVote,crisisActive,turnDurationFor,discussionDurationFor,resolveBoss,SPACE_EVENTS} from '../dist/game.js';
+import {CHARACTER_STYLES,SABOTAGE_MAX,BOSS_BASE,BOSS_MAX,bossEnergy,newGame,crewQuestion,anuQuestion,checkTaskAnswer,sabotageReward,chargeSabotage,spendSabotage,recordTurn,settleRound,voteResult,nextRound,livePlayers,validateConfig,normalizeCharacterIds,voteCandidates,canVoteFor,castVote,crisisActive,turnDurationFor,discussionDurationFor,resolveBoss,SPACE_EVENTS} from '../dist/game.js';
 import {createAnswerInput,createActionGuard,deviceClass} from '../dist/input.js';
 import {toggleTable} from '../dist/settings.js';
 const names=n=>Array.from({length:n},(_,i)=>`Pemain ${i+1}`);
@@ -106,15 +106,15 @@ test('impostor elimination wins; crew elimination excludes future participation'
   const crew=make();crew.votes={0:1,1:'skip',2:1,3:1};voteResult(crew);assert.equal(crew.winner,null);assert.equal(livePlayers(crew).length,3);assert.throws(()=>recordTurn(crew,1));nextRound(crew);play(crew);assert.equal(crew.battery,70);
 });
 test('final-round vote is allowed before survival wins',()=>{
-  const g=make();for(let i=0;i<3;i++){play(g,1,0);assert.equal(g.winner,null);skip(g);if(i<2)nextRound(g);}assert.equal(g.winner,null);assert.equal(g.bossPending,true);assert.equal(resolveBoss(g,1,3),'IMPOSTOR');
+  const g=make();for(let i=0;i<3;i++){play(g,1,0);assert.equal(g.winner,null);skip(g);if(i<2)nextRound(g);}assert.equal(g.winner,null);assert.equal(g.bossPending,true);assert.equal(resolveBoss(g,1,8),'IMPOSTOR');
   const caught=make();caught.round=3;caught.votes={0:'skip',1:0,2:0,3:0};voteResult(caught);assert.equal(caught.winner,'CREW');
-  const rescued=make();rescued.round=3;skip(rescued);assert.equal(resolveBoss(rescued,2,3),'CREW');assert.match(rescued.reason,/2\/3/);
+  const rescued=make();rescued.round=3;skip(rescued);assert.equal(resolveBoss(rescued,8,8),'CREW');assert.match(rescued.reason,/8\/8/);
 });
 test('Boss Sifir completes the final round for every supported roster size',()=>{
   for(let count=3;count<=8;count++){
     const g=newGame(names(count),[2,5],()=>0,{maxRounds:2,mode:count>=7?'plus':'classic'});
     play(g,0,0);skip(g);nextRound(g,()=>.99);play(g,0,0);skip(g);
-    assert.equal(g.bossPending,true);assert.equal(resolveBoss(g,2,3),'CREW');assert.equal(g.bossPending,false);
+    assert.equal(g.bossPending,true);assert.equal(resolveBoss(g,9,8),'CREW');assert.equal(g.bossPending,false);
   }
 });
 test('incomplete rounds and votes are rejected',()=>{
@@ -179,4 +179,40 @@ test('device layout follows viewport and pointer type rather than user agent',()
   assert.equal(deviceClass(820,true),'tablet');
   assert.equal(deviceClass(1280,true),'desktop');
   assert.equal(deviceClass(390,false),'desktop');
+});
+
+test('Boss energy grows with the sabotage the impostors earned, not what they hoarded',()=>{
+  const g=make();
+  assert.equal(bossEnergy(g),BOSS_BASE,'an impostor who earned nothing gets the weakest Boss');
+  // Spending every point still counts: the Boss reads effort, not leftovers.
+  const spent=make();spent.sabotageEarned=50;
+  spent.players.filter(p=>p.role==='IMPOSTOR').forEach(p=>{p.sabotageEnergy=0;});
+  const hoarded=make();hoarded.sabotageEarned=50;
+  hoarded.players.filter(p=>p.role==='IMPOSTOR').forEach(p=>{p.sabotageEnergy=50;});
+  assert.equal(bossEnergy(spent),bossEnergy(hoarded),'spending must not weaken the Boss');
+  assert.ok(bossEnergy(spent)>BOSS_BASE);
+  // Two impostors share the credit, exactly as sabotageReward splits the rewards.
+  const solo=newGame(names(6),[2,3],()=>0,{mode:'classic'}),duo=newGame(names(8),[2,3],()=>0,{mode:'plus'});
+  solo.sabotageEarned=50;duo.sabotageEarned=100;
+  assert.equal(duo.players.filter(p=>p.role==='IMPOSTOR').length,2);
+  assert.equal(bossEnergy(solo),bossEnergy(duo),'per-impostor effort, not the raw total');
+  const huge=make();huge.sabotageEarned=1000;assert.equal(bossEnergy(huge),BOSS_MAX,'capped so 30 seconds stays winnable');
+  const broken=make();broken.sabotageEarned=NaN;assert.equal(bossEnergy(broken),BOSS_BASE);
+});
+test('the Boss is an energy bar to clear, and a turn reports the energy it generated',()=>{
+  const g=make();const spy=g.players.find(p=>p.role==='IMPOSTOR');
+  for(const p of livePlayers(g))recordTurn(g,p.id,p.role==='CREW'?{correct:3,answered:3}:{correct:3,answered:3,attack:25,earned:25});
+  assert.equal(g.sabotageEarned,25,'earned energy accumulates across the mission');
+  assert.equal(g.turnResults.find(r=>r.playerId===spy.id).earned,25);
+  settleRound(g);skip(g);
+  const invalid=make();
+  const crew=invalid.players.find(p=>p.role==='CREW');
+  assert.throws(()=>recordTurn(invalid,crew.id,{earned:5}),'crew can never earn sabotage energy');
+  const spy2=invalid.players.find(p=>p.role==='IMPOSTOR');
+  assert.throws(()=>recordTurn(invalid,spy2.id,{earned:51}));
+  // Clearing the bar wins; falling one short loses.
+  const win=make();win.round=3;skip(win);assert.equal(win.bossPending,true);
+  assert.equal(resolveBoss(win,9,9),'CREW');assert.equal(win.bossResult.need,9);
+  const loss=make();loss.round=3;skip(loss);assert.equal(resolveBoss(loss,8,9),'IMPOSTOR');
+  assert.match(loss.reason,/8\/9/);
 });
