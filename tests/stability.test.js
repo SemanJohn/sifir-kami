@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {runInNewContext} from 'node:vm';
-import {stationSlots} from '../dist/input.js';
+import {stationSlots,rosterSignature} from '../dist/input.js';
 
 const expected={
   "dist/assets/fonts/BALOO2-LICENSE.txt": "273d4bb4d30d7f7011adfa11ee858b1d70a6b1f94cae89e6fa261ed8f1b8839a",
@@ -70,5 +70,86 @@ test('PWA refuses a damaged background and retains the prior cache',async()=>{
   runInNewContext(source,context);
   let promise;events.install({waitUntil:p=>promise=p});
   await assert.rejects(promise,/Incomplete station background/);
-  assert.equal(activated,false);assert.equal(removed.length,1);assert.ok(removed[0].endsWith('2.1.1'));
+  const {version}=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
+  assert.equal(activated,false);assert.equal(removed.length,1);assert.ok(removed[0].endsWith(version));
+});
+const appSource=()=>readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+const slice=(source,from,to)=>source.slice(source.indexOf(from),source.indexOf(to));
+
+test('number keys reach the keypad even when no keypad button has focus',()=>{
+  const code=slice(appSource(),'function handleTypedKey',"document.addEventListener('keydown',handleTypedKey)");
+  const typed=[],boss=[];
+  const run=(screen,event,curtain=null,dialog=null)=>{
+    const ctx={screen,enterDigit:key=>typed.push(key),enterBossDigit:key=>boss.push(key),
+      $:selector=>selector==='.safety-curtain'?curtain:selector==='dialog[open]'?dialog:null,event};
+    runInNewContext(code+';handleTypedKey(event)',ctx);
+  };
+  const press=(key,extra={})=>({key,target:{tagName:'BODY'},preventDefault(){},...extra});
+  // The question draw blurs the active element, so body is the realistic target.
+  run('TASK',press('7'));run('TASK',press('Backspace'));run('TASK',press('Enter'));
+  assert.deepEqual(typed,['7','⌫','✓']);
+  run('BOSS',press('4'));assert.deepEqual(boss,['4']);
+  // Typing in a name field, behind the safety curtain, in a dialog or on any
+  // other screen must never reach the keypad.
+  run('TASK',press('5',{target:{tagName:'INPUT'}}));
+  run('TASK',press('5'),{});
+  run('TASK',press('5'),null,{});
+  run('LOBBY',press('5'));
+  run('TASK',press('5',{repeat:true}));
+  run('TASK',press('5',{ctrlKey:true}));
+  run('TASK',press('a'));
+  assert.deepEqual(typed,['7','⌫','✓']);
+});
+test('the turn clock stops once all three questions are answered',()=>{
+  const source=appSource();
+  const pill={textContent:'3s',classList:{remove(){this.removed=true;}},setAttribute(){}},fill={style:{width:'12%'}};
+  const task={done:false,deadline:Date.now()+3000,duration:25};
+  const ctx={clock:7,task,clearInterval(id){ctx.cleared=id;},
+    $:selector=>selector==='#task-timer'?pill:selector==='#time-fill'?fill:null};
+  runInNewContext(slice(source,'function freezeTaskTimer','function neutralTask')+';freezeTaskTimer()',ctx);
+  assert.equal(ctx.cleared,7);assert.equal(ctx.clock,null);
+  assert.equal(task.deadline,Infinity);assert.equal(pill.textContent,'✓');assert.equal(fill.style.width,'100%');
+  // A frozen turn must not be force-ended by a stale tick, whatever the role.
+  let finished=0;
+  const tick={screen:'TASK',task:{done:true,deadline:Date.now()-1000,duration:25},game:{config:{timerOff:false}},
+    finishTask:()=>finished++,$:()=>{throw new Error('the frozen timer must not be redrawn');}};
+  runInNewContext(slice(source,'function tickTask','function logCurrentAnswer')+';tickTask()',tick);
+  assert.equal(finished,0);
+});
+test('stage reactions are skipped while the station is hidden on phones',()=>{
+  const code=slice(appSource(),'function stageLive','function checkpoint');
+  const el={clientWidth:0,clientHeight:0},played=[];
+  const scene={ready:true,celebrate:()=>played.push('celebrate')};
+  const ctx={station:{scene,game:null},$:()=>el,requestAnimationFrame:()=>{}};
+  runInNewContext(code+';stageEffect(s=>s.celebrate())',ctx);
+  assert.deepEqual(played,[]);
+  el.clientWidth=360;el.clientHeight=400;
+  runInNewContext(code+';stageEffect(s=>s.celebrate())',ctx);
+  assert.deepEqual(played,['celebrate']);
+});
+test('the crew layout is rebuilt only when the stage or roster really changes',()=>{
+  const crew=[{id:0,name:'Ali',characterId:2,alive:true},{id:1,name:'Bea',characterId:5,alive:true}];
+  const base=rosterSignature(390,600,false,crew);
+  assert.equal(base,rosterSignature(390,600,false,crew.map(p=>({...p}))));
+  assert.notEqual(base,rosterSignature(391,600,false,crew));
+  assert.notEqual(base,rosterSignature(390,600,true,crew));
+  assert.notEqual(base,rosterSignature(390,600,false,[{...crew[0],name:'Ali B'},crew[1]]));
+  assert.notEqual(base,rosterSignature(390,600,false,[{...crew[0],characterId:3},crew[1]]));
+  assert.notEqual(base,rosterSignature(390,600,false,[{...crew[0],alive:false},crew[1]]));
+  assert.notEqual(base,rosterSignature(390,600,false,crew.slice(0,1)));
+});
+test('a hidden station sleeps before the next frame, never handing Phaser a 0x0 canvas',()=>{
+  const code=slice(appSource(),'function stageLive','function checkpoint');
+  const el={clientWidth:0,clientHeight:0},calls=[],frames=[];
+  const game={scale:{stopListeners:()=>calls.push('stop'),startListeners:()=>calls.push('start'),refresh:()=>calls.push('refresh')},loop:{sleep:()=>calls.push('sleep'),wake:()=>calls.push('wake')}};
+  const ctx={station:{game},$:()=>el,requestAnimationFrame:f=>frames.push(f)};
+  runInNewContext(code+';syncStage();',ctx);
+  // A deferred sleep lets the Phaser loop step once more on a 0x0 parent, which
+  // throws "Framebuffer status: Incomplete Attachment", so it must be immediate.
+  assert.deepEqual(calls,['stop','sleep']);assert.equal(frames.length,0);
+  // Waking still waits a frame so the new layout can settle first.
+  el.clientWidth=390;el.clientHeight=600;runInNewContext('syncStage()',ctx);
+  assert.deepEqual(calls,['stop','sleep']);assert.equal(frames.length,1);
+  frames[0]();
+  assert.deepEqual(calls,['stop','sleep','start','wake','refresh']);
 });

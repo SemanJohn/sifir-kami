@@ -2,7 +2,19 @@
 
 Permainan web 2D berbahasa Melayu untuk 3–8 pemain sekolah rendah. Satu peranti diserahkan bergilir. Mod Mini mengaktifkan 2 krew dan 1 penyamar untuk tepat 3 pemain; mod Klasik mempunyai seorang penyamar, manakala Misi+ mempunyai dua penyamar apabila ada 7–8 pemain.
 
-Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v2.1.1**.
+Main: [Sifir Kami](https://semanjohn.github.io/sifir-kami/). Versi semasa: **v2.2.0**.
+
+## Pembaikan v2.2.0
+
+- **Pemasa giliran berhenti selepas soalan ketiga.** Sebelum ini kiraan terus berjalan pada skrin tamat tugasan, jadi penyamar yang menjawab dengan tenang boleh kehilangan peluang memilih kekuatan serangan apabila masa habis. Kini kiraan dibekukan untuk semua peranan dengan paparan yang sama, jadi tempoh giliran masih tidak membocorkan peranan.
+- **Papan kekunci fizikal boleh menaip jawapan.** Selepas soalan baharu dilukis fokus dilepaskan supaya papan kekunci telefon tidak terbuka; akibatnya kekunci nombor pada komputer riba tidak sampai ke papan nombor. Pendengar kekunci kini berada pada dokumen dan mengabaikan medan nama, tirai keselamatan dan panel bantuan.
+- **Animasi tidak lagi bertimbun ketika pentas tersembunyi.** Pada telefon, kanvas stesen disembunyikan semasa bermain dan gelung Phaser tidur, jadi konfeti serta reaksi watak tidak pernah tamat dan meletus sekaligus apabila lobi kembali. Kesan kini hanya dimainkan apabila pentas benar-benar dilihat.
+- **Watak tidak dibina semula tanpa sebab.** Setiap pertukaran skrin, ketikan lobi dan peristiwa saiz semula membina semula kesemua sprite, memutuskan animasi apungan dan membazir kuasa. Susunan kini mempunyai cap jari; pembinaan semula hanya berlaku apabila saiz kanvas, tetapan pergerakan atau senarai pemain berubah.
+- **Muat pertama lebih ringan.** Gambar rupa watak hanya dikodkan kepada PNG apabila benar-benar dipaparkan, bukan kesemua 20 sekali gus ketika aplikasi dibuka.
+- **Ralat framebuffer Phaser dihapuskan.** Apabila skrin bertukar dan kanvas stesen disembunyikan, arahan tidur ditangguhkan satu bingkai. Gelung Phaser kadangkala sempat melangkah dahulu, melihat ruang 0×0 dan membuang `Framebuffer status: Incomplete Attachment` yang boleh mengosongkan kanvas. Pentas kini ditidurkan serta-merta; membangunkannya masih ditangguhkan supaya susun atur sempat menetap. Diukur dengan menogol Tetapan guru ↔ lobi: **3 ralat dalam 54 togol sebelum ini, 0 dalam 144 togol selepas pembaikan**.
+- **Nama Home Screen lebih kemas.** `apple-mobile-web-app-title` dan `mobile-web-app-capable` ditambah supaya ikon iPhone dan Android memaparkan "Sifir Kami".
+
+Diuji dengan main penuh 3 dan 8 pemain pada 375×667, 390×844, landskap 844×390 dan desktop 1280×800: tiada ralat konsol dan tiada tatal halaman.
 
 ## Pembaikan v2.1.1
 
@@ -154,7 +166,7 @@ Service worker mengaktifkan cache baharu selepas semua aset dimuat turun. Aplika
 - `dist/index.html` — rangka semantik dan taklimat permainan.
 - `dist/style.css` — reka bentuk responsif, safe area iPhone dan mod kurang pergerakan.
 - `dist/app.js` — skrin, pemasa, tirai privasi dan interaksi.
-- `dist/input.js` — pengesahan sentuhan mengikut soalan dan pointer.
+- `dist/input.js` — pengesahan sentuhan mengikut soalan dan pointer, kelas peranti, petak watak dan cap jari susunan pentas.
 - `dist/settings.js` — tetapan guru dan kumpulan setempat.
 - `dist/learning.js` — statistik adaptif, laporan dan CSV.
 - `dist/session.js` — pemulihan misi dan sejarah laporan setempat.
